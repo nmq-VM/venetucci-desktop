@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Venetucci Control",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "identifier": "com.venetucci.control",
   "build": {
     "frontendDist": "../frontend"
@@ -37,7 +37,7 @@
       "endpoints": [
   "https://github.com/nmq-VM/venetucci-control/releases/latest/download/latest.json"
 ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ3RkRCM0ZBMTc3OUJDOTUKUldTVnZIa1grclA5MTlEZkxMdWsvVjF2bzR6UVNHeVphS3BpQm9yQXcxODRhWEFwbkNtSmZGZHAK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI4QTVCNUFFQkJFREFBQkMKUldTOHF1MjdycldsS0JPY2tXQXFsVG43eHJtYWxqekRWYWFEd0xIa09KdEY5RkdYenVIaXJYR1UK"
     }
   }
 }
