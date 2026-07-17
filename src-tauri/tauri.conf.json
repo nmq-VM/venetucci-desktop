@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Venetucci Control",
+  "version": "1.0.0",
+  "identifier": "com.venetucci.control",
+  "build": {
+    "frontendDist": "../frontend"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "Venetucci Control",
+        "width": 1280,
+        "height": 820,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+  "https://github.com/nmq-VM/venetucci-control/releases/latest/download/latest.json"
+],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ3RkRCM0ZBMTc3OUJDOTUKUldTVnZIa1grclA5MTlEZkxMdWsvVjF2bzR6UVNHeVphS3BpQm9yQXcxODRhWEFwbkNtSmZGZHAK"
+    }
+  }
+}

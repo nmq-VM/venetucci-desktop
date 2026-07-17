@@ -1,0 +1,14 @@
+# Lo compilado: pesa varios GB, NUNCA se sube
+src-tauri/target/
+
+# Generados automaticamente
+src-tauri/gen/
+
+# Claves privadas: NUNCA al repo
+*.key
+*.key.pub
+.env
+
+# Sistema
+.DS_Store
+Thumbs.db

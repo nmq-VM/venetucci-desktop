@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Tauri: Generar iconos (usar tu icon-512.png)",
+      "type": "shell",
+      "command": "cargo tauri icon ${input:iconPath}",
+      "options": { "cwd": "${workspaceFolder}/src-tauri" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Tauri: Probar app (dev)",
+      "type": "shell",
+      "command": "cargo tauri dev",
+      "options": { "cwd": "${workspaceFolder}/src-tauri" },
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "Tauri: Compilar instalador (build)",
+      "type": "shell",
+      "command": "cargo tauri build",
+      "options": { "cwd": "${workspaceFolder}/src-tauri" },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "iconPath",
+      "type": "promptString",
+      "description": "Ruta a tu PNG de origen (ej: ../icon-512.png)",
+      "default": "../icon-512.png"
+    }
+  ]
+}
