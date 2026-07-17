@@ -12,6 +12,7 @@
     "autostart:allow-disable",
     "autostart:allow-is-enabled",
     "dialog:allow-save",
+    "dialog:allow-open",
     {
       "identifier": "fs:allow-write-file",
       "allow": [{ "path": "**" }]
