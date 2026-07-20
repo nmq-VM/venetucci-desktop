@@ -1,6 +1,5 @@
 name: Release
 
-# Se dispara al subir un tag que empiece con "v" (ej: v1.0.1)
 on:
   push:
     tags:
@@ -14,14 +13,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest'      # Mac (Intel + Apple Silicon)
+          - platform: 'macos-latest'
             args: '--target universal-apple-darwin'
-          - platform: 'windows-latest'    # Windows
+          - platform: 'windows-latest'
             args: ''
 
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Instalar Rust
         uses: dtolnay/rust-toolchain@stable
