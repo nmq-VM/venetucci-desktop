@@ -10,6 +10,15 @@ use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 
 fn main() {
     tauri::Builder::default()
+        // Instancia unica: si la app ya esta corriendo, en vez de abrir otra
+        // copia, trae al frente la ventana existente. (Debe ir PRIMERO.)
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.show();
+                let _ = w.unminimize();
+                let _ = w.set_focus();
+            }
+        }))
         // Actualizacion automatica + reinicio
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
@@ -35,6 +44,7 @@ fn main() {
                     "show" => {
                         if let Some(w) = app.get_webview_window("main") {
                             let _ = w.show();
+                            let _ = w.unminimize();
                             let _ = w.set_focus();
                         }
                     }
