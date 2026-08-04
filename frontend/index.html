@@ -573,7 +573,7 @@ function onAuthed(user){
         _myName=res.data.full_name||'';try{if(_myName)localStorage.setItem('vc_user_name',_myName);}catch(e){}
         _requiredVer=res.data.required_version||'';
         finish(res.data.role);
-        if(!window._hbSet){window._hbSet=setInterval(reportVersion,600000);}
+        if(!window._hbSet){window._hbSet=setInterval(function(){if(!document.hidden)reportVersion();},600000);}
         reportVersion();versionGate();loadMessages();if(!window._msgPoll){window._msgPoll=setInterval(loadMessages,20000);}
         // primer ingreso: obligamos a elegir contrasena propia
         if(res.data.password_changed===false)setTimeout(function(){openPass(true);},400);
@@ -701,17 +701,36 @@ function autoSave(tab){
 function saveInspection(record){
   var sb=getSB();
   if(sb&&navigator.onLine){
-    sb.from('inspections').upsert([record],{onConflict:'inspection_id'}).then(function(res){
-      if(res.error){console.error('Supabase insert error:',res.error);queueInspection(record);}
+    _upsertTO(sb,record,15000).then(function(res){
+      if(res&&res.error){console.error('Supabase save error:',res.error);queueInspection(record);}
       else{console.log('Inspection saved to Supabase');}
-    },function(err){console.error('Supabase insert failed:',err);queueInspection(record);});
+    });
   }else{
     queueInspection(record);
     console.log('Sin conexion: inspeccion guardada en cola local');
   }
 }
+function _copyFallback(txt){
+  try{var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('Datos copiados al portapapeles.');}
+  catch(e){prompt('Copia este texto manualmente:',txt);}
+}
+function _copyPending(){
+  var txt=localStorage.getItem(OUTBOX_KEY)||'[]';
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){alert('Datos copiados. Envialos al administrador para cargarlos manualmente.');},function(){_copyFallback(txt);});}
+    else _copyFallback(txt);
+  }catch(e){_copyFallback(txt);}
+}
+function _upsertTO(sb,rec,ms){
+  return new Promise(function(resolve){
+    var fired=false,t=setTimeout(function(){if(!fired){fired=true;resolve({error:{message:'El servidor no respondio (timeout '+(ms/1000)+'s). Revisa la conexion de esta PC.'}});}},ms);
+    sb.from('inspections').upsert([rec],{onConflict:'inspection_id'}).then(
+      function(res){if(!fired){fired=true;clearTimeout(t);resolve(res);}},
+      function(err){if(!fired){fired=true;clearTimeout(t);resolve({error:err});}});
+  });
+}
 function flushOutbox(manual){
-  if(_flushing)return;
+  if(_flushing){ if(manual)alert('Ya hay una sincronizacion en curso. Proba de nuevo en unos segundos.'); return; }
   if(!navigator.onLine){ if(manual)alert('La app no detecta conexion a internet.'); return; }
   var sb=getSB();if(!sb){ if(manual)alert('No se pudo inicializar la conexion con el servidor.'); return; }
   var arr=getOutbox();if(!arr.length){updateSyncBadge();if(manual)alert('No hay nada pendiente para sincronizar.');return;}
@@ -722,17 +741,17 @@ function flushOutbox(manual){
     if(manual){
       if(firstErr){
         var msg=(firstErr&&(firstErr.message||firstErr.hint||firstErr.details||firstErr.code))||JSON.stringify(firstErr);
-        alert('No se pudo sincronizar (Ref '+errRef+'):\n\n'+msg);
+        if(confirm('No se pudo sincronizar (Ref '+errRef+'):\n\n'+msg+'\n\nCopiar los datos pendientes al portapapeles como respaldo?'))_copyPending();
       }else if(!remaining.length){ alert('Sincronizado correctamente.'); }
     }
   }
   function next(){
     if(i>=arr.length){done();return;}
     var rec=arr[i++];
-    sb.from('inspections').upsert([rec],{onConflict:'inspection_id'}).then(function(res){
-      if(res.error){if(!firstErr){firstErr=res.error;errRef=rec.ref_no||'';}remaining.push(rec);}
+    _upsertTO(sb,rec,15000).then(function(res){
+      if(res&&res.error){if(!firstErr){firstErr=res.error;errRef=rec.ref_no||'';}remaining.push(rec);}
       next();
-    },function(err){if(!firstErr){firstErr=err;errRef=rec.ref_no||'';}remaining.push(rec);next();});
+    });
   }
   next();
 }
@@ -744,7 +763,14 @@ function updateSyncBadge(){
     el=document.createElement('div');el.id='sync-badge';
     el.style.cssText='position:fixed;bottom:14px;right:14px;z-index:99999;background:#c47f1a;color:#fff;padding:8px 13px;border-radius:20px;font-size:12px;font-family:sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;display:none';
     el.title='Click para reintentar sincronizacion';
-    el.onclick=function(){flushOutbox(true);};
+    el.onclick=function(){
+      var a=getOutbox();
+      if(a.length){
+        var lista=a.map(function(r){return '\u2022 Ref '+(r.ref_no||'(sin ref)')+' \u2014 '+(r.vessel||'(sin buque)');}).join('\n');
+        if(!confirm('Pendientes de sincronizar ('+a.length+'):\n\n'+lista+'\n\nSincronizar ahora?'))return;
+      }
+      flushOutbox(true);
+    };
     document.body.appendChild(el);
   }
   if(n>0){el.textContent=(navigator.onLine?'↻ ':'⚠ ')+n+' sin sincronizar';el.style.display='block';}
@@ -1065,10 +1091,10 @@ function savePass(){
 // ── Actualizacion: aviso manual (Actualizar / Cancelar) ───────────────────
 function dismissUpdate(){var m=document.getElementById('update-modal');if(m)m.style.display='none';}
 
-var _updBusy=false,_updLast=0,_updSnooze=0,_belowMin=false,_requiredVer='';
+var _updBusy=false,_updLast=0,_updSnooze=0,_updSnoozeVer='',_belowMin=false,_requiredVer='';
 var UPD_THROTTLE=3*60*60*1000;   // no chequear mas de 1 vez cada 3 hs
 var UPD_SNOOZE=6*60*60*1000;     // si toca Cancelar, no re-molestar por 6 hs
-var APP_SEMVER='2';   // numero visible/contador (V1, V2, ...) - subir de a 1 por release         // <-- SUBIR en cada release (junto con tauri.conf.json)
+var APP_SEMVER='3';   // numero visible/contador (V1, V2, ...) - subir de a 1 por release         // <-- SUBIR en cada release (junto con tauri.conf.json)
 
 function cmpVer(a,b){
   a=(''+(a||'0')).split('.').map(function(n){return parseInt(n,10)||0;});
@@ -1076,7 +1102,7 @@ function cmpVer(a,b){
   for(var i=0;i<Math.max(a.length,b.length);i++){var x=a[i]||0,y=b[i]||0;if(x<y)return -1;if(x>y)return 1;}
   return 0;
 }
-function reportVersion(){var sb=getSB();if(sb&&navigator.onLine){try{sb.rpc('report_version',{v:APP_SEMVER});}catch(e){}}}
+function reportVersion(){var sb=getSB();if(sb&&navigator.onLine){try{sb.rpc('report_version',{v:APP_SEMVER}).then(function(){},function(){});}catch(e){}}}
 function showRevoked(){
   var o=document.getElementById('revoked-overlay');
   if(!o){o=document.createElement('div');o.id='revoked-overlay';
@@ -1108,7 +1134,7 @@ function _modal(){
 function showUpdateNotice(up){
   if(_updBusy)return;
   var blocking=_belowMin;
-  if(!blocking && Date.now()-_updSnooze<UPD_SNOOZE)return;   // pospuesto hace poco
+  if(!blocking && _updSnoozeVer===(up.version||'') && Date.now()-_updSnooze<UPD_SNOOZE)return;   // pospuesta ESTA version; una nueva aparece siempre
   var o=_modal();
   document.getElementById('upd-ttl').textContent = blocking?'Actualización obligatoria':'Nueva versión disponible';
   document.getElementById('upd-msg').textContent = blocking
@@ -1118,7 +1144,7 @@ function showUpdateNotice(up){
   prog.style.display='none';
   cancel.style.display=blocking?'none':'inline-block';
   ok.disabled=false;ok.style.opacity='1';ok.textContent='Actualizar';
-  cancel.onclick=function(){_updSnooze=Date.now();dismissUpdate();};
+  cancel.onclick=function(){_updSnooze=Date.now();_updSnoozeVer=(up.version||'');dismissUpdate();};
   ok.onclick=function(){_install(up,ok,cancel,prog);};
   o.style.display='flex';
 }
@@ -1160,6 +1186,7 @@ function onForeground(){
   _fgLast=now;
   checkUpdate(true);             // fuerza: ignora el throttle de 3 hs al traerla al frente
   loadMessages();
+  reportVersion();               // last_seen = ultima vez que la trajo al frente
 }
 
 // ── Puerta abierta: version minima obligatoria (se activa desde el dashboard)
@@ -2022,7 +2049,6 @@ function dlF44(){
 }
 
 // ── Admin Panel ───────────────────────────────────────────────────────────
-var ADMIN_PASS='venetucci2026';
 var adminData=[];
 var adminFiltered=[];
 
@@ -2030,13 +2056,7 @@ function openAdmin(){
   switchTab('db');
 }
 
-function checkDbPass(){
-  var pass=document.getElementById('db-pass-input').value;
-  if(pass!==ADMIN_PASS){alert('Incorrect password');document.getElementById('db-pass-input').value='';return;}
-  document.getElementById('db-login').style.display='none';
-  document.getElementById('db-content').style.display='block';
-  loadAdminData();
-}
+// acceso a Database controlado por rol (auth); el gate por contraseña quedo obsoleto
 
 function closeAdmin(){
   document.getElementById('admin-panel').style.display='none';
@@ -2407,14 +2427,7 @@ if(false && "serviceWorker" in navigator){
 <button id="db-shrink" onclick="toggleDbExpand()" title="Volver a la vista normal" style="display:none;position:fixed;top:10px;right:14px;z-index:99990;padding:8px 14px;background:#1a2a3a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.3)">&#10005; Achicar</button>
 <div id="db-main" style="display:none;padding:20px 16px;max-width:1280px;margin:0 auto">
   <div style="max-width:1200px;margin:0 auto;padding:20px 0;">
-    <div id="db-login" style="text-align:center;padding:60px 20px;">
-      <div style="font-size:48px;margin-bottom:20px">&#128202;</div>
-      <h2 style="font-size:20px;font-weight:700;color:#1a2a3a;margin-bottom:20px">Inspection Database</h2>
-      <div style="display:inline-flex;flex-direction:column;gap:10px;width:280px;">
-        <input type="password" id="db-pass-input" placeholder="Enter password..." style="padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;text-align:center" onkeydown="if(event.key==='Enter')checkDbPass()">
-        <button onclick="checkDbPass()" style="padding:10px;background:#1a2a3a;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer">Access Database</button>
-      </div>
-    </div>
+    <div id="db-login" style="display:none"></div>
     <div id="db-content" style="display:none">
       <div id="db-tools" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;flex-wrap:wrap;gap:10px;">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
