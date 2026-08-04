@@ -640,6 +640,7 @@ var OUTBOX_KEY='vc_outbox_v1',_flushing=false;
 function getOutbox(){try{return JSON.parse(localStorage.getItem(OUTBOX_KEY)||'[]');}catch(e){return[];}}
 function setOutbox(a){try{localStorage.setItem(OUTBOX_KEY,JSON.stringify(a));}catch(e){}updateSyncBadge();}
 function queueInspection(rec){
+  if(!rec._queued_at)rec._queued_at=new Date().toISOString();
   var a=getOutbox();
   for(var i=0;i<a.length;i++){
     if(rec.inspection_id&&a[i].inspection_id===rec.inspection_id){a[i]=rec;setOutbox(a);return;}
@@ -702,7 +703,7 @@ function saveInspection(record){
   var sb=getSB();
   if(sb&&navigator.onLine){
     _upsertTO(sb,record,15000).then(function(res){
-      if(res&&res.error){console.error('Supabase save error:',res.error);queueInspection(record);}
+      if(res&&res.error){console.error('Supabase save error:',res.error);try{logEvent('error','save',(res.error.message||res.error.code||'error'),{ref:record.ref_no||''});}catch(e){}queueInspection(record);}
       else{console.log('Inspection saved to Supabase');}
     });
   }else{
@@ -722,9 +723,10 @@ function _copyPending(){
   }catch(e){_copyFallback(txt);}
 }
 function _upsertTO(sb,rec,ms){
+  var clean={};for(var k in rec){if(k.charAt(0)!=='_')clean[k]=rec[k];}   // no mandar claves internas
   return new Promise(function(resolve){
     var fired=false,t=setTimeout(function(){if(!fired){fired=true;resolve({error:{message:'El servidor no respondio (timeout '+(ms/1000)+'s). Revisa la conexion de esta PC.'}});}},ms);
-    sb.from('inspections').upsert([rec],{onConflict:'inspection_id'}).then(
+    sb.from('inspections').upsert([clean],{onConflict:'inspection_id'}).then(
       function(res){if(!fired){fired=true;clearTimeout(t);resolve(res);}},
       function(err){if(!fired){fired=true;clearTimeout(t);resolve({error:err});}});
   });
@@ -738,6 +740,7 @@ function flushOutbox(manual){
   var remaining=[],i=0,firstErr=null,errRef='';
   function done(){
     _flushing=false;setOutbox(remaining);
+    if(firstErr){try{logEvent('error','sync',(firstErr.message||firstErr.code||JSON.stringify(firstErr)),{ref:errRef,pendientes:remaining.length});}catch(e){}}
     if(manual){
       if(firstErr){
         var msg=(firstErr&&(firstErr.message||firstErr.hint||firstErr.details||firstErr.code))||JSON.stringify(firstErr);
@@ -1094,7 +1097,7 @@ function dismissUpdate(){var m=document.getElementById('update-modal');if(m)m.st
 var _updBusy=false,_updLast=0,_updSnooze=0,_updSnoozeVer='',_belowMin=false,_requiredVer='';
 var UPD_THROTTLE=3*60*60*1000;   // no chequear mas de 1 vez cada 3 hs
 var UPD_SNOOZE=6*60*60*1000;     // si toca Cancelar, no re-molestar por 6 hs
-var APP_SEMVER='3';   // numero visible/contador (V1, V2, ...) - subir de a 1 por release         // <-- SUBIR en cada release (junto con tauri.conf.json)
+var APP_SEMVER='4';   // numero visible/contador (V1, V2, ...) - subir de a 1 por release         // <-- SUBIR en cada release (junto con tauri.conf.json)
 
 function cmpVer(a,b){
   a=(''+(a||'0')).split('.').map(function(n){return parseInt(n,10)||0;});
@@ -1102,7 +1105,52 @@ function cmpVer(a,b){
   for(var i=0;i<Math.max(a.length,b.length);i++){var x=a[i]||0,y=b[i]||0;if(x<y)return -1;if(x>y)return 1;}
   return 0;
 }
-function reportVersion(){var sb=getSB();if(sb&&navigator.onLine){try{sb.rpc('report_version',{v:APP_SEMVER}).then(function(){},function(){});}catch(e){}}}
+// ── Telemetria: eventos de error hacia el panel ───────────────────────────
+var EVQ_KEY='vc_events_v1',_evSent=0;
+function _evq(){try{return JSON.parse(localStorage.getItem(EVQ_KEY)||'[]');}catch(e){return[];}}
+function _evqSet(a){try{localStorage.setItem(EVQ_KEY,JSON.stringify(a.slice(-50)));}catch(e){}}
+function logEvent(level,source,message,ctx){
+  if(_evSent>30)return;                        // moderacion por sesion
+  _evSent++;
+  var ev={user_id:_myId||localStorage.getItem('vc_user_id')||null,
+          user_name:myName()||null,app_version:APP_SEMVER,
+          level:level||'error',source:source||'app',
+          message:String(message||'').slice(0,500),
+          context:ctx||null};
+  var sb=getSB();
+  if(sb&&navigator.onLine){
+    sb.from('app_events').insert([ev]).then(function(res){
+      if(res.error){var a=_evq();a.push(ev);_evqSet(a);}
+    },function(){var a=_evq();a.push(ev);_evqSet(a);});
+  }else{var a=_evq();a.push(ev);_evqSet(a);}
+}
+function flushEvents(){
+  var sb=getSB();if(!sb||!navigator.onLine)return;
+  var a=_evq();if(!a.length)return;
+  _evqSet([]);
+  sb.from('app_events').insert(a).then(function(res){
+    if(res.error){_evqSet(a);}
+  },function(){_evqSet(a);});
+}
+window.addEventListener('online',function(){setTimeout(flushEvents,4000);});
+window.addEventListener('error',function(e){
+  try{logEvent('error','js',(e&&e.message)||'error js',{file:(e&&e.filename||'').split('/').pop(),line:e&&e.lineno});}catch(x){}
+});
+window.addEventListener('unhandledrejection',function(e){
+  try{var r=e&&e.reason;logEvent('error','js','promesa: '+((r&&(r.message||r))||'?'),null);}catch(x){}
+});
+
+function reportVersion(){
+  var sb=getSB();if(!sb||!navigator.onLine)return;
+  try{
+    var q=getOutbox(),oldest=null;
+    for(var i=0;i<q.length;i++){var t=q[i]._queued_at;if(t&&(!oldest||t<oldest))oldest=t;}
+    sb.rpc('report_status',{v:APP_SEMVER,pending:q.length,oldest:oldest}).then(function(res){
+      if(res&&res.error){sb.rpc('report_version',{v:APP_SEMVER}).then(function(){},function(){});}
+    },function(){sb.rpc('report_version',{v:APP_SEMVER}).then(function(){},function(){});});
+  }catch(e){}
+  flushEvents();
+}
 function showRevoked(){
   var o=document.getElementById('revoked-overlay');
   if(!o){o=document.createElement('div');o.id='revoked-overlay';
@@ -1163,6 +1211,7 @@ function _install(up,ok,cancel,prog){
     return window.__TAURI__.process.relaunch();
   }).catch(function(e){
     console.error('update:',e);_updBusy=false;
+    try{logEvent('error','update',(e&&e.message)||String(e),null);}catch(x){}
     if(prog)prog.style.display='none';
     if(ok){ok.disabled=false;ok.style.opacity='1';ok.textContent='Reintentar';}
     if(cancel&&!_belowMin)cancel.style.display='inline-block';
