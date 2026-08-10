@@ -13,6 +13,9 @@
     "autostart:allow-is-enabled",
     "dialog:allow-save",
     "dialog:allow-open",
+    "dialog:allow-message",
+    "dialog:allow-confirm",
+    "dialog:allow-ask",
     {
       "identifier": "fs:allow-write-file",
       "allow": [{ "path": "**" }]
