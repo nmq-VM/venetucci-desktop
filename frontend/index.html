@@ -182,7 +182,19 @@ td input{padding:5px 7px;font-size:12px}
   <div class="tab" id="tab-t" data-tab="t" onclick="switchTab('t')">&#128674; Tankers &mdash; F.13 / F-44</div>
   <div class="tab" id="tab-idtf" data-tab="idtf" onclick="switchTab('idtf')">&#129532; Cleaning IDTF</div>
   <div class="tab" id="tab-fosfa" data-tab="fosfa" onclick="switchTab('fosfa')">&#9940; FOSFA Banned</div>
+  <div class="tab" id="tab-lineup" data-tab="lineup" onclick="switchTab('lineup')" style="display:none">&#128197; Line-up</div>
   <div class="tab" id="tab-db" data-tab="db" onclick="switchTab('db')" style="display:none">&#128202; Database</div>
+</div>
+
+<!-- ════ LINE-UP ════ -->
+<div class="main" id="lineup-main" style="display:none">
+  <div class="section">
+    <div class="sec-hdr" style="cursor:default">
+      <span><span class="sec-icon">&#128197;</span>LINE-UP</span>
+      <span id="lineup-meta" style="font-size:12px;font-weight:400;opacity:.9"></span>
+    </div>
+    <div id="lineup-body"></div>
+  </div>
 </div>
 
 <!-- ════ BULKERS ════ -->
@@ -591,12 +603,15 @@ function applyRole(role){
   var btn=document.getElementById('btn-admin');
   var thA=document.getElementById('th-acciones');
   if(tab)tab.style.display=isAdmin?'':'none';
+  var tabL=document.getElementById('tab-lineup');
+  if(tabL)tabL.style.display=isAdmin?'':'none';
   if(btn)btn.style.display=isAdmin?'inline-block':'none';
   if(thA)thA.style.display=_isSuper?'':'none';
   if(!isAdmin){
     var cur=document.querySelector('.tab.active');
-    if(cur&&cur.id==='tab-db')switchTab('b');
+    if(cur&&(cur.id==='tab-db'||cur.id==='tab-lineup'))switchTab('b');
     var dbm=document.getElementById('db-main');if(dbm)dbm.style.display='none';
+    var lum=document.getElementById('lineup-main');if(lum)lum.style.display='none';
   }
 }
 function doLogout(){
@@ -699,6 +714,46 @@ function autoSave(tab){
     saveInspection(tab==='b'?recordB(d):recordT(d));
   },1500);
 }
+
+// ── Carteles propios: los dialogos nativos de Tauri son asincronicos y los
+//    bloquea el ACL, asi que la app usa los suyos y no depende de eso.
+function uiModal(msg,opts){
+  return new Promise(function(resolve){
+    if(!document.body){ resolve(true); return; }
+    var ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:rgba(10,20,35,.55);display:flex;align-items:center;justify-content:center;z-index:2147483647;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif';
+    var box=document.createElement('div');
+    box.style.cssText='background:#fff;border-radius:12px;padding:20px 22px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.4)';
+    var p=document.createElement('div');
+    p.style.cssText='font-size:14px;line-height:1.55;color:#1a2a3a;white-space:pre-wrap;margin-bottom:18px;max-height:55vh;overflow:auto';
+    p.textContent=String(msg==null?'':msg);
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;gap:8px;justify-content:flex-end';
+    function cerrar(v){ try{document.body.removeChild(ov);}catch(e){} document.removeEventListener('keydown',onkey,true); resolve(v); }
+    function boton(txt,bg,val){
+      var b=document.createElement('button');
+      b.textContent=txt;
+      b.style.cssText='border:none;border-radius:7px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;color:#fff;background:'+bg;
+      b.onclick=function(){cerrar(val);};
+      return b;
+    }
+    function onkey(e){
+      if(e.key==='Escape'){e.preventDefault();cerrar(false);}
+      else if(e.key==='Enter'){e.preventDefault();cerrar(true);}
+    }
+    var esConf=!!(opts&&opts.confirm);
+    if(esConf)row.appendChild(boton('Cancelar','#64748b',false));
+    row.appendChild(boton(esConf?'Aceptar':'Entendido','#1f4e78',true));
+    box.appendChild(p);box.appendChild(row);ov.appendChild(box);document.body.appendChild(ov);
+    document.addEventListener('keydown',onkey,true);
+    var bs=row.getElementsByTagName('button'); if(bs.length)bs[bs.length-1].focus();
+  });
+}
+function uiAlert(m){ return uiModal(m,{}); }
+function uiConfirm(m){ return uiModal(m,{confirm:true}); }
+// los alert() que ya existen pasan a usar el cartel propio, sin tocar cada llamada
+try{ window.alert=function(m){ uiModal(m,{}); }; }catch(e){}
+
 function saveInspection(record){
   var sb=getSB();
   if(sb&&navigator.onLine){
@@ -738,14 +793,17 @@ function flushOutbox(manual){
   var arr=getOutbox();if(!arr.length){updateSyncBadge();if(manual)alert('No hay nada pendiente para sincronizar.');return;}
   _flushing=true;
   var remaining=[],i=0,firstErr=null,errRef='';
-  function done(){
+  async function done(){
     _flushing=false;setOutbox(remaining);
+    try{reportVersion();}catch(e){}   // avisa el nuevo conteo para que el panel no quede desfasado
     if(firstErr){try{logEvent('error','sync',(firstErr.message||firstErr.code||JSON.stringify(firstErr)),{ref:errRef,pendientes:remaining.length});}catch(e){}}
     if(manual){
       if(firstErr){
         var msg=(firstErr&&(firstErr.message||firstErr.hint||firstErr.details||firstErr.code))||JSON.stringify(firstErr);
-        if(confirm('No se pudo sincronizar (Ref '+errRef+'):\n\n'+msg+'\n\nCopiar los datos pendientes al portapapeles como respaldo?'))_copyPending();
-      }else if(!remaining.length){ alert('Sincronizado correctamente.'); }
+        if(/row-level security|violates row/i.test(String(msg)))
+          msg='Tu sesion no esta activa en el servidor, por eso rechazo el guardado.\n\nSali y volve a entrar con tu usuario: los datos siguen guardados en esta PC y se suben solos.';
+        if(await uiConfirm('No se pudo sincronizar (Ref '+errRef+'):\n\n'+msg+'\n\nCopiar los datos pendientes al portapapeles como respaldo?'))_copyPending();
+      }else if(!remaining.length){ uiAlert('Sincronizado correctamente.'); }
     }
   }
   function next(){
@@ -756,7 +814,20 @@ function flushOutbox(manual){
       next();
     });
   }
-  next();
+  // La base rechaza el alta si la sesion murio (politica is_active). Verificamos antes.
+  sb.auth.getSession().then(function(sres){
+    var sess = sres && sres.data && sres.data.session;
+    if(!sess){
+      _flushing=false;
+      try{logEvent('error','sync','sesion vencida al sincronizar',{pendientes:arr.length});}catch(e){}
+      if(manual)uiAlert('Tu sesion expiro.\n\nLos datos siguen guardados en esta PC. Sali y volve a entrar con tu usuario, y se van a subir solos.');
+      return;
+    }
+    next();
+  },function(){
+    _flushing=false;
+    if(manual)uiAlert('No se pudo verificar la sesion. Revisa la conexion e intenta de nuevo.');
+  });
 }
 function updateSyncBadge(){
   if(!document.body)return;
@@ -766,11 +837,11 @@ function updateSyncBadge(){
     el=document.createElement('div');el.id='sync-badge';
     el.style.cssText='position:fixed;bottom:14px;right:14px;z-index:99999;background:#c47f1a;color:#fff;padding:8px 13px;border-radius:20px;font-size:12px;font-family:sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;display:none';
     el.title='Click para reintentar sincronizacion';
-    el.onclick=function(){
+    el.onclick=async function(){
       var a=getOutbox();
       if(a.length){
         var lista=a.map(function(r){return '\u2022 Ref '+(r.ref_no||'(sin ref)')+' \u2014 '+(r.vessel||'(sin buque)');}).join('\n');
-        if(!confirm('Pendientes de sincronizar ('+a.length+'):\n\n'+lista+'\n\nSincronizar ahora?'))return;
+        if(!(await uiConfirm('Pendientes de sincronizar ('+a.length+'):\n\n'+lista+'\n\nSincronizar ahora?')))return;
       }
       flushOutbox(true);
     };
@@ -847,13 +918,13 @@ function loadFromRef(tab){
   _refPending[tab]=true;
   function done(){_refPending[tab]=false;autoSave(tab);}
   sb.from('inspections').select('*').eq('ref_no',ref).ilike('type',type)
-    .order('created_at',{ascending:false}).limit(5).then(function(res){
+    .order('created_at',{ascending:false}).limit(5).then(async function(res){
       if(res.error){console.error('Ref lookup error:',res.error);done();return;}
       // un 'user' no tiene permiso de lectura -> siempre vuelve vacio -> sigue con su id interno
       var rows=(res.data||[]).filter(function(r){return r.inspection_id!==myId;});
       if(!rows.length){done();return;}
       var rec=rows[0];
-      if(!confirm('Se encontro una inspeccion con Ref. No. "'+ref+'" ('+(rec.vessel||'sin nombre')+'). Cargar todos los datos y continuar ESE registro?')){done();return;}
+      if(!(await uiConfirm('Se encontro una inspeccion con Ref. No. "'+ref+'" ('+(rec.vessel||'sin nombre')+'). Cargar todos los datos y continuar ESE registro?'))){done();return;}
       adoptRecord(tab,rec,function(){
         if(rec.form_data){
           try{localStorage.setItem(tab==='b'?SK_B:SK_T,JSON.stringify(rec.form_data));}catch(e){}
@@ -970,8 +1041,8 @@ function renderSettings(){
   document.getElementById('settings-body').innerHTML=html;
 }
 
-function clearDB(key){
-  if(!confirm('\u00bfBorrar toda la base de datos?'))return;
+async function clearDB(key){
+  if(!(await uiConfirm('\u00bfBorrar toda la base de datos?')))return;
   localStorage.setItem(DB_KEYS[key],JSON.stringify([]));refreshDL(key);renderSettings();
 }
 
@@ -1097,7 +1168,7 @@ function dismissUpdate(){var m=document.getElementById('update-modal');if(m)m.st
 var _updBusy=false,_updLast=0,_updSnooze=0,_updSnoozeVer='',_belowMin=false,_requiredVer='';
 var UPD_THROTTLE=3*60*60*1000;   // no chequear mas de 1 vez cada 3 hs
 var UPD_SNOOZE=6*60*60*1000;     // si toca Cancelar, no re-molestar por 6 hs
-var APP_SEMVER='6';   // numero visible/contador (V1, V2, ...) - subir de a 1 por release         // <-- SUBIR en cada release (junto con tauri.conf.json)
+var APP_SEMVER='7';   // numero visible/contador (V1, V2, ...) - subir de a 1 por release         // <-- SUBIR en cada release (junto con tauri.conf.json)
 
 function cmpVer(a,b){
   a=(''+(a||'0')).split('.').map(function(n){return parseInt(n,10)||0;});
@@ -1321,6 +1392,8 @@ function switchTab(tab){
   document.getElementById('db-main').style.display=tab==='db'?'block':'none';
   var _im=document.getElementById('idtf-main');if(_im)_im.style.display=tab==='idtf'?'block':'none';
   var _fm=document.getElementById('fosfa-main');if(_fm)_fm.style.display=tab==='fosfa'?'block':'none';
+  var _lm=document.getElementById('lineup-main');if(_lm)_lm.style.display=tab==='lineup'?'block':'none';
+  if(tab==='lineup'&&typeof loadLineup==='function')loadLineup();
   document.getElementById('dl-b-area').style.display=tab==='b'?'flex':'none';
   document.getElementById('dl-t-area').style.display=tab==='t'?'flex':'none';
   if(tab==='db'){var _dl=document.getElementById('db-login');if(_dl)_dl.style.display='none';var _dc=document.getElementById('db-content');if(_dc)_dc.style.display='block';if(typeof loadAdminData==='function')loadAdminData();}
@@ -1738,8 +1811,8 @@ function loadT(){
   }catch(e){}
 }
 
-function clearAll(){
-  if(!confirm('\u00bfClear alls los datos del formulario activo?'))return;
+async function clearAll(){
+  if(!(await uiConfirm('\u00bfClear alls los datos del formulario activo?')))return;
   var tab=document.querySelector('.tab.active').dataset.tab;
   localStorage.removeItem(tab==='b'?SK_B:SK_T);
   try{localStorage.removeItem('vc_insp_id_'+tab);}catch(e){}
@@ -1752,6 +1825,80 @@ function checkReady(tab){
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────
+
+// ── LINE-UP (solo lectura; lo arma el servidor) ────────────────────────────
+var _MES_LU=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function fmtLU(d){ if(!d)return''; var p=String(d).split('-'); if(p.length<3)return String(d); return (+p[2])+'-'+_MES_LU[(+p[1])-1]; }
+
+function loadLineup(){
+  var body=document.getElementById('lineup-body'), meta=document.getElementById('lineup-meta');
+  if(!body)return;
+  var sb=getSB();
+  if(!sb||!navigator.onLine){ body.innerHTML='<div style="padding:22px;color:#6b7a89;font-size:13px">Sin conexion. El line-up lo arma el servidor, asi que necesita internet para verse.</div>'; return; }
+  body.innerHTML='<div style="padding:22px;color:#6b7a89;font-size:13px">Cargando...</div>';
+
+  sb.from('lineup_runs').select('lineup_date').order('ran_at',{ascending:false}).limit(1).then(function(rr){
+    var d=(rr&&rr.data&&rr.data[0])||null;
+    if(meta)meta.textContent = (d&&d.lineup_date) ? ('Line-up del '+fmtLU(d.lineup_date)) : '';
+  },function(){});
+
+  var hoy=new Date().toISOString().slice(0,10);
+  sb.from('lineup_stops').select('*').or('ets.is.null,ets.gte.'+hoy).then(function(res){
+    if(res&&res.error){ body.innerHTML='<div style="padding:22px;color:#b3261e;font-size:13px">No se pudo cargar: '+ex(res.error.message||'')+'</div>'; return; }
+    var stops=(res&&res.data)||[];
+    if(!stops.length){ body.innerHTML='<div style="padding:22px;color:#6b7a89;font-size:13px">Ningun buque de la lista figura en el line-up.</div>'; return; }
+    var ids=stops.map(function(x){return x.id;});
+    sb.from('lineup_rows').select('*').in('stop_id',ids).then(function(r2){
+      renderLineup(stops,(r2&&r2.data)||[],body);
+    },function(){ renderLineup(stops,[],body); });
+  },function(){ body.innerHTML='<div style="padding:22px;color:#b3261e;font-size:13px">No se pudo cargar el line-up.</div>'; });
+}
+
+function renderLineup(stops,rows,body){
+  stops.sort(function(a,b){
+    var A=String(a.vessel_key||''),B=String(b.vessel_key||'');
+    return A===B ? String(a.etb||'').localeCompare(String(b.etb||'')) : A.localeCompare(B);
+  });
+  var TH='padding:10px 8px;background:#1f4e78;color:#fff;font-size:10px;font-weight:700;text-align:left;letter-spacing:.4px;border-bottom:none';
+  var h='<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+    +'<tr>'
+    +'<th style="'+TH+'">Vessel</th><th style="'+TH+'">Port</th><th style="'+TH+'">Berth</th>'
+    +'<th style="'+TH+'">Ops.</th><th style="'+TH+'">Cargo</th><th style="'+TH+';text-align:right">Quantity</th>'
+    +'<th style="'+TH+'">Dest/Orig.</th><th style="'+TH+'">Shipper</th><th style="'+TH+'">ETA</th><th style="'+TH+'">ETB</th></tr>';
+  var prev='',zeb=false,n=0;
+  for(var i=0;i<stops.length;i++){
+    var e=stops[i], cambio=(String(e.vessel_key)!==prev);
+    if(cambio){ prev=String(e.vessel_key); zeb=false; }
+    var propias=[];
+    for(var k=0;k<rows.length;k++) if(rows[k].stop_id===e.id) propias.push(rows[k]);
+    if(!propias.length) propias=[{}];
+    for(var j=0;j<propias.length;j++){
+      var c=propias[j], bg=zeb?'#fafbfc':'#ffffff'; zeb=!zeb; n++;
+      var sep=(cambio&&j===0)?'border-top:2px solid #dfe5ea;':'';
+      var ops=String(c.ops||'').toUpperCase();
+      var col=(ops==='DISCH')?'#a05a00':'#1a5fa0';
+      var nuevo=(j===0&&!e.notified_at)?' <span title="escala nueva" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#2a7d46;vertical-align:middle"></span>':'';
+      var TD='padding:7px 8px;'+sep+'border-bottom:1px solid #eef1f4;';
+      h+='<tr style="background:'+bg+'">'
+       +'<td style="'+TD+'font-weight:700;white-space:nowrap">'+ex(e.vessel||'')+nuevo+'</td>'
+       +'<td style="'+TD+'color:#5b6b7a">'+ex(e.port||'')+'</td>'
+       +'<td style="'+TD+'color:#5b6b7a">'+ex(e.terminal||'')+'</td>'
+       +'<td style="'+TD+'color:'+col+';font-weight:700">'+ex(ops)+'</td>'
+       +'<td style="'+TD+'">'+ex(c.cargo||'')+'</td>'
+       +'<td style="'+TD+'text-align:right;color:#5b6b7a;white-space:nowrap">'+(c.quantity!=null?Number(c.quantity).toLocaleString('es-AR'):'')+'</td>'
+       +'<td style="'+TD+'color:#5b6b7a">'+ex(c.destination||'')+'</td>'
+       +'<td style="'+TD+'color:#5b6b7a">'+ex(c.shipper||'')+'</td>'
+       +'<td style="'+TD+'color:#6b7a89;white-space:nowrap">'+fmtLU(e.eta)+'</td>'
+       +'<td style="'+TD+'font-weight:700;white-space:nowrap">'+fmtLU(e.etb)+'</td>'
+       +'</tr>';
+    }
+  }
+  h+='</table></div><div style="padding:11px 12px;font-size:11px;color:#8b98a5">'
+   +'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#2a7d46;vertical-align:middle"></span>'
+   +' escala nueva &middot; '+n+' fila(s) &middot; ordenado por buque y ETB &middot; fuente: ISA Agents</div>';
+  body.innerHTML=h;
+}
+
 function ex(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function b64a(b){var bn=atob(b),a=new Uint8Array(bn.length);for(var i=0;i<bn.length;i++)a[i]=bn.charCodeAt(i);return a;}
 function dload(blob,fn){
@@ -2270,11 +2417,11 @@ function renderAdminTable(){
   document.getElementById('admin-status').textContent=adminFiltered.length+' records'+(adminFiltered.length!==adminData.length?' (filtered from '+adminData.length+')':'');
 }
 
-function openRecord(i){
+async function openRecord(i){
   var r=adminFiltered[i];if(!r)return;
   if(!r.form_data){alert('Ese registro no tiene la planilla guardada (es anterior a esta version).');return;}
   var tab=(r.type||'').toLowerCase().indexOf('tank')>=0?'t':'b';
-  if(!confirm('Abrir la inspeccion Ref '+(r.ref_no||'')+' ('+(r.vessel||'')+') en la planilla?\n\nSe reemplaza lo que tengas cargado en esa pestana.'))return;
+  if(!(await uiConfirm('Abrir la inspeccion Ref '+(r.ref_no||'')+' ('+(r.vessel||'')+') en la planilla?\n\nSe reemplaza lo que tengas cargado en esa pestana.')))return;
   try{localStorage.setItem(tab==='b'?SK_B:SK_T,JSON.stringify(r.form_data));}catch(e){}
   adoptRecord(tab,r,function(){
     switchTab(tab);
@@ -2299,9 +2446,9 @@ function editRefNo(i){
     loadAdminData();
   },function(){alert('Error de conexion al editar.');});
 }
-function deleteRecord(i){
+async function deleteRecord(i){
   var r=adminFiltered[i];if(!r)return;
-  if(!confirm('BORRAR definitivamente la inspeccion Ref '+(r.ref_no||'')+' ('+(r.vessel||'sin nombre')+')?\n\nEsta accion no se puede deshacer.'))return;
+  if(!(await uiConfirm('BORRAR definitivamente la inspeccion Ref '+(r.ref_no||'')+' ('+(r.vessel||'sin nombre')+')?\n\nEsta accion no se puede deshacer.')))return;
   var sb=getSB();if(!sb)return;
   if(!navigator.onLine){alert('Sin conexion: no se puede borrar ahora.');return;}
   sb.from('inspections').delete().eq('id',r.id).then(function(res){
