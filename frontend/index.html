@@ -1168,7 +1168,7 @@ function dismissUpdate(){var m=document.getElementById('update-modal');if(m)m.st
 var _updBusy=false,_updLast=0,_updSnooze=0,_updSnoozeVer='',_belowMin=false,_requiredVer='';
 var UPD_THROTTLE=3*60*60*1000;   // no chequear mas de 1 vez cada 3 hs
 var UPD_SNOOZE=6*60*60*1000;     // si toca Cancelar, no re-molestar por 6 hs
-var APP_SEMVER='7';   // numero visible/contador (V1, V2, ...) - subir de a 1 por release         // <-- SUBIR en cada release (junto con tauri.conf.json)
+var APP_SEMVER='8';   // numero visible/contador (V1, V2, ...) - subir de a 1 por release         // <-- SUBIR en cada release (junto con tauri.conf.json)
 
 function cmpVer(a,b){
   a=(''+(a||'0')).split('.').map(function(n){return parseInt(n,10)||0;});
@@ -1842,8 +1842,7 @@ function loadLineup(){
     if(meta)meta.textContent = (d&&d.lineup_date) ? ('Line-up del '+fmtLU(d.lineup_date)) : '';
   },function(){});
 
-  var hoy=new Date().toISOString().slice(0,10);
-  sb.from('lineup_stops').select('*').or('ets.is.null,ets.gte.'+hoy).then(function(res){
+  sb.from('lineup_stops').select('*').then(function(res){
     if(res&&res.error){ body.innerHTML='<div style="padding:22px;color:#b3261e;font-size:13px">No se pudo cargar: '+ex(res.error.message||'')+'</div>'; return; }
     var stops=(res&&res.data)||[];
     if(!stops.length){ body.innerHTML='<div style="padding:22px;color:#6b7a89;font-size:13px">Ningun buque de la lista figura en el line-up.</div>'; return; }
@@ -1855,7 +1854,10 @@ function loadLineup(){
 }
 
 function renderLineup(stops,rows,body){
+  var rango=function(x){ return String((x&&x.status)||'').toUpperCase()==='NOMINATED'?0:1; };
   stops.sort(function(a,b){
+    var ra=rango(a),rb=rango(b);
+    if(ra!==rb)return ra-rb;                       // nominados primero
     var A=String(a.vessel_key||''),B=String(b.vessel_key||'');
     return A===B ? String(a.etb||'').localeCompare(String(b.etb||'')) : A.localeCompare(B);
   });
@@ -1865,9 +1867,15 @@ function renderLineup(stops,rows,body){
     +'<th style="'+TH+'">Vessel</th><th style="'+TH+'">Port</th><th style="'+TH+'">Berth</th>'
     +'<th style="'+TH+'">Ops.</th><th style="'+TH+'">Cargo</th><th style="'+TH+';text-align:right">Quantity</th>'
     +'<th style="'+TH+'">Dest/Orig.</th><th style="'+TH+'">Shipper</th><th style="'+TH+'">ETA</th><th style="'+TH+'">ETB</th></tr>';
-  var prev='',zeb=false,n=0;
+  var prev='',zeb=false,n=0,grupoAnt='';
   for(var i=0;i<stops.length;i++){
-    var e=stops[i], cambio=(String(e.vessel_key)!==prev);
+    var e=stops[i];
+    var grupo=(rango(e)===0)?'NOMINATED':'NO NOMINATED';
+    if(grupo!==grupoAnt){
+      grupoAnt=grupo; prev='';
+      h+='<tr><td colspan="10" style="padding:9px 8px;background:#eef2f6;color:#1e3a5f;font-size:11px;font-weight:700;letter-spacing:.5px;border-top:2px solid #dfe5ea">'+grupo+'</td></tr>';
+    }
+    var cambio=(String(e.vessel_key)!==prev);
     if(cambio){ prev=String(e.vessel_key); zeb=false; }
     var propias=[];
     for(var k=0;k<rows.length;k++) if(rows[k].stop_id===e.id) propias.push(rows[k]);
