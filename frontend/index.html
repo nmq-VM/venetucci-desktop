@@ -1168,7 +1168,7 @@ function dismissUpdate(){var m=document.getElementById('update-modal');if(m)m.st
 var _updBusy=false,_updLast=0,_updSnooze=0,_updSnoozeVer='',_belowMin=false,_requiredVer='';
 var UPD_THROTTLE=3*60*60*1000;   // no chequear mas de 1 vez cada 3 hs
 var UPD_SNOOZE=6*60*60*1000;     // si toca Cancelar, no re-molestar por 6 hs
-var APP_SEMVER='9';   // numero visible/contador (V1, V2, ...) - subir de a 1 por release         // <-- SUBIR en cada release (junto con tauri.conf.json)
+var APP_SEMVER='10';   // numero visible/contador (V1, V2, ...) - subir de a 1 por release         // <-- SUBIR en cada release (junto con tauri.conf.json)
 
 function cmpVer(a,b){
   a=(''+(a||'0')).split('.').map(function(n){return parseInt(n,10)||0;});
@@ -1854,7 +1854,8 @@ function loadLineup(){
 }
 
 function renderLineup(stops,rows,body){
-  var rango=function(x){ return String((x&&x.status)||'').toUpperCase()==='NOMINATED'?0:1; };
+  var rango=function(x){ var s=String((x&&x.status)||'').trim().toUpperCase();
+    return (s && s.indexOf('NOT')!==0) ? 0 : 1; };   // nominado = el estado no empieza con NOT
   stops.sort(function(a,b){
     var ra=rango(a),rb=rango(b);
     if(ra!==rb)return ra-rb;                       // nominados primero
@@ -1906,7 +1907,7 @@ function renderLineup(stops,rows,body){
   }
   h+='</table></div><div style="padding:11px 12px;font-size:11px;color:#8b98a5">'
    +'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#2a7d46;vertical-align:middle"></span>'
-   +' escala nueva &middot; '+n+' fila(s) &middot; ordenado por buque y ETB &middot; fuente: ISA Agents</div>';
+   +' escala nueva &middot; '+n+' fila(s) &middot; nominados primero, despues por buque y ETB</div>';
   body.innerHTML=h;
 }
 
