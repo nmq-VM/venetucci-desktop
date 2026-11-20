@@ -55,6 +55,11 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f0ea;color:#1a1a1a;mi
 .fields.f3{grid-template-columns:repeat(3,1fr)}
 .field{display:flex;flex-direction:column;gap:4px}
 .field.s2{grid-column:span 2}.field.s3{grid-column:span 3}.field.s4{grid-column:span 4}
+.csel{font-size:13px;padding:7px 9px;border:1px solid #e0e0da;border-radius:6px;background:#fafafa;color:#111;outline:none;width:100%}
+.cl-sum{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:12px;color:#444;background:#f6f8fa;border:1px solid #e3e8ee;border-radius:6px;padding:8px 10px}
+.cl-miss{margin-top:10px;font-size:12px;color:#7a5c00;background:#fff8e1;border:1px solid #f2e2a8;border-radius:6px;padding:7px 10px}
+.cl-go{margin-bottom:12px;font-size:13px;color:#1f4e78;background:#eaf1f8;border:1px solid #c9dbee;border-radius:6px;padding:9px 12px}
+.cl-go a{color:#1f4e78;font-weight:700;cursor:pointer;text-decoration:underline}
 label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#888}
 input,select{width:100%;padding:8px 10px;border:1px solid #e0e0da;border-radius:6px;font-size:13px;background:#fafafa;color:#111;outline:none;transition:border-color .15s}
 input:focus,select:focus{border-color:#4a9eff;background:#fff}
@@ -180,10 +185,149 @@ td input{padding:5px 7px;font-size:12px}
 <div class="tabs">
   <div class="tab active" id="tab-b" data-tab="b" onclick="switchTab('b')">&#9875; Bulkers &mdash; F.12 / F-21</div>
   <div class="tab" id="tab-t" data-tab="t" onclick="switchTab('t')">&#128674; Tankers &mdash; F.13 / F-44</div>
+  <div class="tab" id="tab-tc" data-tab="tc" onclick="switchTab('tc')">&#129533; Tank Cleaning</div>
   <div class="tab" id="tab-idtf" data-tab="idtf" onclick="switchTab('idtf')">&#129532; Cleaning IDTF</div>
   <div class="tab" id="tab-fosfa" data-tab="fosfa" onclick="switchTab('fosfa')">&#9940; FOSFA Banned</div>
   <div class="tab" id="tab-lineup" data-tab="lineup" onclick="switchTab('lineup')" style="display:none">&#128197; Line-up</div>
   <div class="tab" id="tab-db" data-tab="db" onclick="switchTab('db')" style="display:none">&#128202; Database</div>
+  <div class="tab" id="tab-cdb" data-tab="cdb" onclick="switchTab('cdb')" style="display:none">&#128202; Cleaning DB</div>
+</div>
+
+<!-- ════ TANK CLEANING (misma inspeccion que Tankers; se vincula por Ref. No.) ════ -->
+<div class="main" id="cleaning-main" style="display:none">
+
+  <div class="section">
+    <div class="sec-hdr" onclick="tog(this)"><span><span class="sec-icon">&#129533;</span>TANK CLEANING &mdash; IDENTIFICATION</span><span>&#9650;</span></div>
+    <div class="sec-body">
+      <div class="fields">
+        <div class="field"><label>Ref. No.</label><input id="tc_ref" oninput="clRefSync(this)" onblur="loadFromRef('t')" style="max-width:180px"></div>
+        <div class="field s3"><label>Datos tomados de la pesta&ntilde;a Tankers (se editan all&iacute;)</label><div id="tc-summary" class="cl-sum"></div></div>
+      </div>
+      <div class="fields" style="margin-top:10px">
+        <div class="field"><label>Superintendent</label>
+          <div class="tgl" id="t_cl_super_tgl"><button data-v="Yes" onclick="clTgl('super','Yes')">Yes</button><button data-v="No" onclick="clTgl('super','No')">No</button></div>
+          <input type="hidden" id="t_cl_super"></div>
+        <div class="field"><label>Cargo tanks (total del buque)</label>
+          <select class="csel" id="t_cl_tanks" onchange="clChg()"></select>
+          <input id="t_cl_tanks_other" placeholder="Ej. 7W + 2 SLW" oninput="sv('t')" style="display:none;margin-top:4px"></div>
+        <div class="field"><label>Coating &mdash; year applied</label>
+          <select class="csel" id="t_cl_year" onchange="clChg()"></select></div>
+        <div class="field"><label>Last vegoil cargo (months ago)</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="t_cl_vegoil" type="number" min="0" max="240" step="1" oninput="clNum(this)" style="flex:1;min-width:0">
+            <div class="tgl" id="t_cl_vegoil_never_tgl"><button data-v="Never" onclick="clTgl('vegoil_never','Never')">Never</button></div>
+          </div>
+          <input type="hidden" id="t_cl_vegoil_never"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sec-hdr" onclick="tog(this)"><span><span class="sec-icon">&#128166;</span>WASHING</span><span>&#9650;</span></div>
+    <div class="sec-body">
+      <div class="fields">
+        <div class="field"><label>Open sea / Up river</label>
+          <div class="tgl" id="t_washed_tgl">
+            <button onclick="setWashed('Open Sea')" class="aa">Open Sea</button>
+            <button onclick="setWashed('Upriver')">Upriver</button>
+          </div>
+          <input type="hidden" id="t_washed" value="Open Sea">
+        </div>
+        <div class="field"><label>Pre-inspection (condition before)</label>
+          <select class="csel" id="t_cond_before" onchange="clChg()"><option value=""></option><option>Good</option><option>Fair</option><option>Poor</option><option>Not done</option></select></div>
+        <div class="field"><label>Temp of hot wash (&deg;C)</label><input id="t_cl_temp" type="number" min="20" max="90" step="1" oninput="clNum(this)"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sec-hdr" onclick="tog(this)"><span><span class="sec-icon">&#129514;</span>CHEMICALS</span><span>&#9650;</span></div>
+    <div class="sec-body">
+      <div class="fields">
+        <div class="field"><label>Chemical 1 &mdash; product</label>
+          <select class="csel" id="t_cl_chem1" onchange="clChg()"></select>
+          <input id="t_cl_chem1_other" placeholder="Producto" oninput="sv('t')" style="display:none;margin-top:4px"></div>
+        <div class="field cl-c1"><label>Conc. %</label><input id="t_cl_chem1_conc" type="number" min="0.1" max="100" step="0.1" oninput="clNum(this)"></div>
+        <div class="field cl-c1"><label>Qty</label><input id="t_cl_chem1_qty" type="number" min="0" step="any" oninput="clNum(this)"></div>
+        <div class="field cl-c1"><label>Unit</label>
+          <div class="tgl" id="t_cl_chem1_unit_tgl"><button data-v="kg" onclick="clTgl('chem1_unit','kg')">kg</button><button data-v="L" onclick="clTgl('chem1_unit','L')">L</button><button data-v="MT" onclick="clTgl('chem1_unit','MT')">MT</button></div>
+          <input type="hidden" id="t_cl_chem1_unit"></div>
+      </div>
+      <div class="fields cl-c1" style="margin-top:10px">
+        <div class="field"><label>Chemical 2 &mdash; product (opcional)</label>
+          <select class="csel" id="t_cl_chem2" onchange="clChg()"></select>
+          <input id="t_cl_chem2_other" placeholder="Producto" oninput="sv('t')" style="display:none;margin-top:4px"></div>
+        <div class="field cl-c2"><label>Conc. %</label><input id="t_cl_chem2_conc" type="number" min="0.1" max="100" step="0.1" oninput="clNum(this)"></div>
+        <div class="field cl-c2"><label>Qty</label><input id="t_cl_chem2_qty" type="number" min="0" step="any" oninput="clNum(this)"></div>
+        <div class="field cl-c2"><label>Unit</label>
+          <div class="tgl" id="t_cl_chem2_unit_tgl"><button data-v="kg" onclick="clTgl('chem2_unit','kg')">kg</button><button data-v="L" onclick="clTgl('chem2_unit','L')">L</button><button data-v="MT" onclick="clTgl('chem2_unit','MT')">MT</button></div>
+          <input type="hidden" id="t_cl_chem2_unit"></div>
+      </div>
+      <div class="fields cl-c1" style="margin-top:10px">
+        <div class="field"><label>FW for chemical (m&sup3;)</label><input id="t_qty_fw" type="text" inputmode="decimal" min="0" max="500" oninput="clNum(this)"></div>
+        <div class="field"><label>Chem cycles</label><input id="t_cl_cycles" type="number" min="1" max="10" step="1" oninput="clNum(this)"></div>
+        <div class="field"><label>Tanks per batch</label><input id="t_cl_batch" type="number" min="1" max="30" step="1" oninput="clNum(this)"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sec-hdr" onclick="tog(this)"><span><span class="sec-icon">&#128703;</span>FINAL RINSE &amp; CONDITION</span><span>&#9650;</span></div>
+    <div class="sec-body">
+      <div class="fields">
+        <div class="field"><label>FW final rinse (m&sup3;)</label><input id="t_cl_fw_rinse" type="number" min="0" max="500" step="any" oninput="clNum(this)"></div>
+        <div class="field"><label>Manual cleaning</label>
+          <div class="tgl" id="t_cl_manual_tgl"><button data-v="Yes" onclick="clTgl('manual','Yes')">Yes</button><button data-v="No" onclick="clTgl('manual','No')">No</button></div>
+          <input type="hidden" id="t_cl_manual"></div>
+        <div class="field"><label>Slop quantity (m&sup3;)</label><input id="t_slop" type="text" inputmode="decimal" min="0" max="2000" oninput="clNum(this)"></div>
+        <div class="field"><label>Soot in hoppers</label>
+          <div class="tgl" id="t_cl_soot_tgl"><button data-v="Yes" onclick="clTgl('soot','Yes')">Yes</button><button data-v="No" onclick="clTgl('soot','No')">No</button></div>
+          <input type="hidden" id="t_cl_soot"></div>
+        <div class="field"><label>Final condition (condition after)</label>
+          <select class="csel" id="t_cond_after" onchange="clChg()"><option value=""></option><option>Good</option><option>Fair</option><option>Poor</option></select></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sec-hdr" onclick="tog(this)"><span><span class="sec-icon">&#9989;</span>CLOSE-OUT</span><span>&#9650;</span></div>
+    <div class="sec-body">
+      <div class="fields">
+        <div class="field"><label>Total days</label><input id="t_cl_days" type="number" min="0.5" max="30" step="0.5" oninput="clNum(this)"></div>
+        <div class="field s2"><label>Pass inspection</label>
+          <div class="tgl" id="t_cl_passed_tgl"><button data-v="Yes" onclick="clTgl('passed','Yes')">Yes</button><button data-v="No" onclick="clTgl('passed','No')">No</button></div>
+          <input type="hidden" id="t_cl_passed"></div>
+        <div class="field s4"><label>Notes</label><textarea id="t_cl_notes" maxlength="500" rows="3" oninput="sv('t')" style="font-family:inherit;font-size:13px;padding:7px 9px;border:1px solid #e0e0da;border-radius:6px;background:#fafafa;resize:vertical"></textarea></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ CLEANING DATABASE (admin) ════ -->
+<div id="cdb-main" style="display:none;padding:20px 16px;max-width:1280px;margin:0 auto">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;flex-wrap:wrap;gap:10px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input id="cdb-f-vessel" placeholder="Vessel..." oninput="filterCleaning()" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:130px">
+      <input id="cdb-f-owner" placeholder="Owner..." oninput="filterCleaning()" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:130px">
+      <input id="cdb-f-chem" placeholder="Chemical..." oninput="filterCleaning()" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:130px">
+      <input id="cdb-f-cargo" placeholder="Last / next cargo..." oninput="filterCleaning()" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:150px">
+      <select id="cdb-f-coating" onchange="filterCleaning()" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px"><option value="">All coatings</option><option>Epoxy</option><option>Stainless steel</option><option>Zinc</option></select>
+      <select id="cdb-f-passed" onchange="filterCleaning()" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px"><option value="">Pass insp.: all</option><option>Yes</option><option>No</option></select>
+      <select id="cdb-f-estado" onchange="filterCleaning()" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px"><option value="">Completos e incompletos</option><option value="ok">Solo completos</option><option value="inc">Solo incompletos</option></select>
+      <input id="cdb-f-date" type="month" onchange="filterCleaning()" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button onclick="loadCleaningData()" title="Actualizar" style="padding:8px 16px;background:#777;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">&#8635; Actualizar</button>
+      <button onclick="downloadCleaningExcel()" style="padding:8px 16px;background:#1a7a3a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">&#8659; Excel</button>
+    </div>
+  </div>
+  <div style="overflow-x:auto;border:1px solid #e3e3e3;border-radius:8px;background:#fff">
+    <table style="border-collapse:collapse;font-size:12px;width:max-content;min-width:100%">
+      <thead id="cdb-thead"></thead>
+      <tbody id="cdb-tbody"></tbody>
+    </table>
+  </div>
+  <div id="cdb-status" style="margin-top:10px;font-size:13px;color:#888;text-align:center"></div>
 </div>
 
 <!-- ════ LINE-UP ════ -->
@@ -360,6 +504,7 @@ td input{padding:5px 7px;font-size:12px}
             <option value="stainless steel">Stainless Steel</option>
             <option value="epoxy" selected>Epoxy</option>
             <option value="other">Other (edit in document)</option>
+            <option value="zinc">Zinc</option>
           </select>
         </div>
       </div>
@@ -404,34 +549,13 @@ td input{padding:5px 7px;font-size:12px}
   <div class="section">
     <div class="sec-hdr" onclick="tog(this)"><span><span class="sec-icon">&#128230;</span>WASHING &amp; CLEANING</span><span>&#9650;</span></div>
     <div class="sec-body">
-      <div class="fields">
-        <div class="field"><label>Washed With</label>
-          <div class="tgl" id="t_washed_tgl">
-            <button onclick="setWashed('Open Sea')" class="aa">Open Sea</button>
-            <button onclick="setWashed('Upriver')">Upriver</button>
-          </div>
-          <input type="hidden" id="t_washed" value="Open Sea">
-        </div>
-        <div class="field"><label>Chemical Wash</label>
-          <div class="tgl" id="t_chem_tgl">
-            <button onclick="setTgl('t','chem','YES')" class="aa">YES</button>
-            <button onclick="setTgl('t','chem','NO')">NO</button>
-          </div>
-        </div>
-        <div class="field s2" id="chem-name-row" style="display:block"><label>Chemical Name / Quantity</label><input id="t_chem_name" oninput="sv('t')"></div>
-      </div>
-      <div class="fields">
-        <div class="field"><label>Condition Before</label><input id="t_cond_before" oninput="sv('t')"></div>
-        <div class="field"><label>Condition After</label><input id="t_cond_after" oninput="sv('t')"></div>
-        <div class="field"><label>Qty FW (MT)</label><input id="t_qty_fw" oninput="sv('t')"></div>
-        <div class="field"><label>Slop</label><input id="t_slop" oninput="sv('t')"></div>
-      </div>
+      <div class="cl-go">&#9888; Completar la pesta&ntilde;a <a onclick="switchTab('tc')">Tank Cleaning</a>.</div>
       <div style="margin-top:4px">
         <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#888">Cleaning Method</label>
         <div class="c-opts" id="t_clean_opts" style="margin-top:6px">
           <div class="c-opt" data-val="A" onclick="setClean('t','A')">A — Dry</div>
-          <div class="c-opt" data-val="B" onclick="setClean('t','B')">B — With Water</div>
-          <div class="c-opt active" data-val="C" onclick="setClean('t','C')">C — Water + Chemicals</div>
+          <div class="c-opt active" data-val="B" onclick="setClean('t','B')">B — With Water</div>
+          <div class="c-opt" data-val="C" onclick="setClean('t','C')">C — Water + Chemicals</div>
           <div class="c-opt" data-val="D" onclick="setClean('t','D')">D — Water + Det. + Disinfectant</div>
         </div>
       </div>
@@ -605,11 +729,14 @@ function applyRole(role){
   if(tab)tab.style.display=isAdmin?'':'none';
   var tabL=document.getElementById('tab-lineup');
   if(tabL)tabL.style.display=isAdmin?'':'none';
+  var tabC=document.getElementById('tab-cdb');
+  if(tabC)tabC.style.display=isAdmin?'':'none';
   if(btn)btn.style.display=isAdmin?'inline-block':'none';
   if(thA)thA.style.display=_isSuper?'':'none';
   if(!isAdmin){
     var cur=document.querySelector('.tab.active');
-    if(cur&&(cur.id==='tab-db'||cur.id==='tab-lineup'))switchTab('b');
+    if(cur&&(cur.id==='tab-db'||cur.id==='tab-lineup'||cur.id==='tab-cdb'))switchTab('b');
+    var cdm=document.getElementById('cdb-main');if(cdm)cdm.style.display='none';
     var dbm=document.getElementById('db-main');if(dbm)dbm.style.display='none';
     var lum=document.getElementById('lineup-main');if(lum)lum.style.display='none';
   }
@@ -699,7 +826,7 @@ function recordT(d){
     prev_port:d.prev_port||'',destination:d.dest||'',
     charterer:d.charterer||'',insp_place:d.insp_place||'',
     last_cargo:last.join(', '),nom_cargo:nom.join(', '),cleaning:d.clean||'',
-    chemical:d.chem_name||'',qty_fw:d.qty_fw||'',washed:d.washed||''};
+    chemical:d.chem_name||'',qty_fw:d.qty_fw||'',washed:d.washed||'',cleaning:clRow(d)};
 }
 var _asT={};
 function autoSave(tab){
@@ -782,7 +909,17 @@ function _upsertTO(sb,rec,ms){
   return new Promise(function(resolve){
     var fired=false,t=setTimeout(function(){if(!fired){fired=true;resolve({error:{message:'El servidor no respondio (timeout '+(ms/1000)+'s). Revisa la conexion de esta PC.'}});}},ms);
     sb.from('inspections').upsert([clean],{onConflict:'inspection_id'}).then(
-      function(res){if(!fired){fired=true;clearTimeout(t);resolve(res);}},
+      function(res){
+        if(fired)return;
+        if(res&&res.error&&('cleaning' in clean)&&/cleaning/i.test(String(res.error.message||''))){
+          var sin={};for(var k2 in clean){if(k2!=='cleaning')sin[k2]=clean[k2];}
+          sb.from('inspections').upsert([sin],{onConflict:'inspection_id'}).then(
+            function(r2){if(!fired){fired=true;clearTimeout(t);resolve(r2);}},
+            function(e2){if(!fired){fired=true;clearTimeout(t);resolve({error:e2});}});
+          return;
+        }
+        fired=true;clearTimeout(t);resolve(res);
+      },
       function(err){if(!fired){fired=true;clearTimeout(t);resolve({error:err});}});
   });
 }
@@ -977,7 +1114,7 @@ var DEFAULT_ACTIVE=['1P','1S','2P','2S','3P','3S','4P','4S','5P','5S','6P','6S',
 
 var state={
   b:{senasa:'NO',clean:'B',active_holds:[1,2,3,4,5],insp_no:1,results:{},inspData:{}},
-  t:{chem:'YES',washed:'Open Sea',clean:'C',
+  t:{washed:'Open Sea',clean:'B',
      chk_clean:'Yes',chk_cond:'Yes',chk_dry:'Yes',chk_free:'Yes',
      active_tanks:DEFAULT_ACTIVE.slice(),insp_no:1,results:{},inspData:{}}
 };
@@ -1168,7 +1305,7 @@ function dismissUpdate(){var m=document.getElementById('update-modal');if(m)m.st
 var _updBusy=false,_updLast=0,_updSnooze=0,_updSnoozeVer='',_belowMin=false,_requiredVer='';
 var UPD_THROTTLE=3*60*60*1000;   // no chequear mas de 1 vez cada 3 hs
 var UPD_SNOOZE=6*60*60*1000;     // si toca Cancelar, no re-molestar por 6 hs
-var APP_SEMVER='11';   // numero visible/contador (V1, V2, ...) - subir de a 1 por release         // <-- SUBIR en cada release (junto con tauri.conf.json)
+var APP_SEMVER='12';   // numero visible/contador (V1, V2, ...) - subir de a 1 por release         // <-- SUBIR en cada release (junto con tauri.conf.json)
 
 function cmpVer(a,b){
   a=(''+(a||'0')).split('.').map(function(n){return parseInt(n,10)||0;});
@@ -1363,7 +1500,8 @@ function init(){
   setTgl('b','senasa',state.b.senasa);
   setInspNo('b',1,true);setInspNo('t',1,true);
   setClean('b',state.b.clean);
-  setClean('t',state.t.clean,true);applyChemClean(state.t.chem);
+  setClean('t',state.t.clean);
+  clInit();
   setWashed(state.t.washed||'Open Sea');
   loadB();loadT();
   checkReady('b');checkReady('t');
@@ -1384,7 +1522,9 @@ function init(){
   window.addEventListener('online',function(){setTimeout(function(){runBackup(false);},5000);});
 }
 
+var _curTab='b';
 function switchTab(tab){
+  _curTab=tab;
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
   document.getElementById('tab-'+tab).classList.add('active');
   document.getElementById('bulker-main').style.display=tab==='b'?'block':'none';
@@ -1395,7 +1535,11 @@ function switchTab(tab){
   var _lm=document.getElementById('lineup-main');if(_lm)_lm.style.display=tab==='lineup'?'block':'none';
   if(tab==='lineup'&&typeof loadLineup==='function')loadLineup();
   document.getElementById('dl-b-area').style.display=tab==='b'?'flex':'none';
-  document.getElementById('dl-t-area').style.display=tab==='t'?'flex':'none';
+  document.getElementById('dl-t-area').style.display=(tab==='t'||tab==='tc')?'flex':'none';
+  var _cm=document.getElementById('cleaning-main');if(_cm)_cm.style.display=tab==='tc'?'block':'none';
+  var _cd=document.getElementById('cdb-main');if(_cd)_cd.style.display=tab==='cdb'?'block':'none';
+  if(tab==='tc')clRefresh();
+  if(tab==='cdb')loadCleaningData();
   if(tab==='db'){var _dl=document.getElementById('db-login');if(_dl)_dl.style.display='none';var _dc=document.getElementById('db-content');if(_dc)_dc.style.display='block';if(typeof loadAdminData==='function')loadAdminData();}
 }
 
@@ -1616,10 +1760,8 @@ function setTgl(tab,key,val){
   var bs=el.querySelectorAll('button');bs.forEach(function(b){b.className='';});
   if(val==='YES'||val==='Yes'||val==='Accepted')bs[0].className='aa';else bs[1].className='an';
   state[tab][key]=val;
-  if(tab==='t'&&key==='chem'){showChemName(val);applyChemClean(val);}
   sv(tab);
 }
-function showChemName(val){var el=document.getElementById('chem-name-row');if(el)el.style.display=(val==='YES')?'block':'none';}
 function setWashed(val){
   var el=document.getElementById('t_washed');if(el)el.value=val;
   var tgl=document.getElementById('t_washed_tgl');
@@ -1630,20 +1772,7 @@ function setWashed(val){
   sv('t');
 }
 
-// Tankers: con quimico (YES) solo se puede elegir C o D; sin quimico (NO), A o B.
-var _noChemFix=false;   // true mientras se carga una planilla guardada: no se corrige su valor
-function chemAllowed(chem){return chem==='YES'?['C','D']:['A','B'];}
-function applyChemClean(chem){
-  var ok=chemAllowed(chem);
-  document.querySelectorAll('#t_clean_opts .c-opt').forEach(function(el){
-    var on=ok.indexOf(el.dataset.val)>=0;
-    el.style.opacity=on?'':'.35';el.style.pointerEvents=on?'':'none';
-  });
-  if(!_noChemFix&&ok.indexOf(state.t.clean)<0)setClean('t',ok[0]==='C'?'C':'B',true);   // YES -> C, NO -> B
-}
-// force=true: al cargar una planilla guardada se respeta su valor aunque no combine
-function setClean(tab,val,force){
-  if(tab==='t'&&!force&&chemAllowed(state.t.chem).indexOf(val)<0)return;
+function setClean(tab,val){
   document.querySelectorAll('#'+tab+'_clean_opts .c-opt').forEach(function(el){el.classList.toggle('active',el.dataset.val===val);});
   state[tab].clean=val;sv(tab);
 }
@@ -1702,6 +1831,7 @@ function getB(){
 
 function getT(){
   var tanks=getTanks();
+  var _cl=clGet();
   var d={name:vf('t_name'),flag:vf('t_flag'),year:vf('t_year'),voy:vf('t_voy'),imo:vf('t_imo'),
     prev_port:vf('t_prev_port'),dest:vf('t_dest'),owner:vf('t_owner'),
     insp_place:vf('t_insp_place'),agent:vf('t_agent'),
@@ -1710,7 +1840,7 @@ function getT(){
     charterer:vf('t_charterer'),chart_agents:vf('t_chart_agents'),
     term1:vf('t_term1'),term2:vf('t_term2'),term3:vf('t_term3'),
     surv1:vf('t_surv1'),surv2:vf('t_surv2'),surv3:vf('t_surv3'),
-    washed:vf('t_washed')||state.t.washed,chem:state.t.chem,chem_name:vf('t_chem_name'),
+    washed:vf('t_washed')||state.t.washed,chem:(_cl.chem1?(clHasChem(_cl)?'YES':'NO'):''),chem_name:clChemText(_cl),cl:_cl,
     cond_before:vf('t_cond_before'),cond_after:vf('t_cond_after'),
     qty_fw:vf('t_qty_fw'),slop:vf('t_slop'),
     clean:state.t.clean,comments:vf('t_comments'),
@@ -1744,6 +1874,7 @@ function sv(tab){
     setTimeout(function(){el.classList.remove('show');},1200);
     checkReady(tab);
     autoSave(tab);
+    if(tab==='t'&&_curTab==='tc')clRefresh();
   },350);
 }
 
@@ -1810,11 +1941,10 @@ function loadT(){
     });
     var _td=document.getElementById('t_date');if(_td&&d.t_date!=null)_td.value=d.t_date;
     var _tt=document.getElementById('t_time');if(_tt&&d.t_time!=null)_tt.value=d.t_time;
-    ['cond_before','cond_after','qty_fw','slop'].forEach(function(f){var e=document.getElementById('t_'+f);if(e&&d[f])e.value=d[f];});
+    ['cond_before','cond_after','qty_fw','slop'].forEach(function(f){setSel(document.getElementById('t_'+f),d[f]);});
     if(d.washed)setWashed(d.washed);
     if(d.coating){var ce=document.getElementById('t_coating');if(ce)ce.value=d.coating;}
-    _noChemFix=true;
-    try{if(d.clean)setClean('t',d.clean,true);if(d.chem)setTgl('t','chem',d.chem);}finally{_noChemFix=false;}
+    if(d.clean)setClean('t',d.clean);
     state.t.inspData=d.inspData||{};
     if(!d.inspData&&d.tank_results)state.t.inspData[d.insp_no||1]={tr:d.tank_results};
     setInspNo('t',d.insp_no||1,true);
@@ -1822,12 +1952,15 @@ function loadT(){
     ['chk_clean','chk_cond','chk_dry','chk_free'].forEach(function(k){if(d[k])setTgl('t',k,d[k]);});
     if(d.active_tanks&&d.active_tanks.length){state.t.active_tanks=d.active_tanks;buildTankGrid();buildTTanks();buildTChecks();}
     loadTTanksFromState();
+    clLoad(d);
   }catch(e){try{logEvent('error','load','loadT: '+((e&&e.message)||e),null);}catch(x){}}
 }
 
 async function clearAll(){
   if(!(await uiConfirm('\u00bfBorrar todos los datos del formulario activo?')))return;
   var tab=document.querySelector('.tab.active').dataset.tab;
+  if(tab==='tc')tab='t';
+  if(tab!=='b'&&tab!=='t')return;
   localStorage.removeItem(tab==='b'?SK_B:SK_T);
   try{localStorage.removeItem('vc_insp_id_'+tab);}catch(e){}
   location.reload();
@@ -1839,6 +1972,306 @@ function checkReady(tab){
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────
+
+
+// ══════════════ TANK CLEANING ═════════════════════════════════════════════
+// Es parte de la misma inspeccion de Tankers (mismo registro, mismo Ref. No.).
+// Los datos propios van en d.cl; lo que ya se carga en Tankers no se repite.
+var CL_CHEMS=['None','KT Plus','KT Metal','Careclean SC','Careclean Alkaline','Careclean Concentrate','Caretank Eco',
+  'Marclean SC','Marclean AC','Marclean AL','Marclean Eco','Marclean Green','CTC Cleaner VLC','Navaclean 897','Navaclean 803',
+  'Navaclean 873','Atlas 202','Alkaclean','Super Green','TECO Soot Remover','Cleaning Swift','Aquatuff',
+  'KOH (caustic potash)','NaOH (caustic soda)','Citric acid','Other'];
+var CL_KEYS=['super','tanks','tanks_other','year','vegoil','vegoil_never','temp',
+  'chem1','chem1_other','chem1_conc','chem1_qty','chem1_unit','chem2','chem2_other','chem2_conc','chem2_qty','chem2_unit',
+  'cycles','batch','fw_rinse','manual','soot','days','passed','notes'];
+var CL_TGL=['super','vegoil_never','chem1_unit','chem2_unit','manual','soot','passed'];
+var CL_COAT={'epoxy':'Epoxy','stainless steel':'Stainless steel','zinc':'Zinc'};
+
+function clEl(k){return document.getElementById('t_cl_'+k);}
+function clGet(){var o={};CL_KEYS.forEach(function(k){var e=clEl(k);o[k]=e?String(e.value||'').trim():'';});return o;}
+function clName(c,k){return c[k]==='Other'?(c[k+'_other']||'Other'):(c[k]||'');}
+function clHasChem(c){return !!c.chem1&&c.chem1!=='None';}
+function clChemText(c){
+  var out=[];
+  [1,2].forEach(function(n){
+    var p=clName(c,'chem'+n);
+    if(!p||p==='None'||(n===2&&!clHasChem(c)))return;
+    var conc=c['chem'+n+'_conc'],qty=c['chem'+n+'_qty'],un=c['chem'+n+'_unit'];
+    out.push(p+(conc?' '+conc+'%':'')+(qty?' '+qty+(un?' '+un:''):''));
+  });
+  return out.join(' + ');
+}
+// agrega la opcion si el valor guardado no esta en la lista (registros viejos)
+function setSel(e,val){
+  if(!e)return; val=(val==null?'':String(val));
+  if(e.tagName==='SELECT'&&val){
+    var has=false;for(var i=0;i<e.options.length;i++){if(e.options[i].value===val){has=true;break;}}
+    if(!has){var o=document.createElement('option');o.value=val;o.textContent=val;e.appendChild(o);}
+  }
+  e.value=val;
+}
+function clFill(id,list,blank){
+  var e=document.getElementById(id);if(!e)return;
+  var h=blank?'<option value=""></option>':'';
+  list.forEach(function(v){h+='<option>'+ex(v)+'</option>';});
+  e.innerHTML=h;
+}
+function clInit(){
+  var tk=[];for(var n=4;n<=12;n++){tk.push(n+'W + SLW');}
+  for(var m=4;m<=12;m++){tk.push(m+'W');}
+  tk.push('Other');
+  clFill('t_cl_tanks',tk,true);
+  var ys=[];for(var y=new Date().getFullYear();y>=1990;y--)ys.push(String(y));
+  clFill('t_cl_year',ys,true);
+  clFill('t_cl_chem1',CL_CHEMS,true);
+  clFill('t_cl_chem2',CL_CHEMS.filter(function(x){return x!=='None';}),true);
+  clRefresh();
+}
+function _clPaint(k,val){
+  var g=document.getElementById('t_cl_'+k+'_tgl');if(!g)return;
+  var bs=g.querySelectorAll('button');
+  for(var i=0;i<bs.length;i++){
+    var on=bs[i].dataset.v===val;
+    bs[i].className=on?((val==='No')?'an':(val==='Never'?'ay':'aa')):'';
+  }
+}
+// boton tipo casilla: un segundo click sobre el mismo valor lo deja vacio
+function clTgl(k,val){
+  var h=clEl(k);if(!h)return;
+  var nuevo=(h.value===val)?'':val;
+  h.value=nuevo;_clPaint(k,nuevo);
+  sv('t');clRefresh();
+}
+function clChg(){sv('t');clRefresh();}
+// rango = aviso (amarillo), no bloqueo
+function clNum(e){
+  var v=e.value,mn=e.getAttribute('min'),mx=e.getAttribute('max'),bad=false;
+  if(v!==''){var n=Number(v);if(!isFinite(n)||(mn!==null&&mn!==''&&n<Number(mn))||(mx!==null&&mx!==''&&n>Number(mx)))bad=true;}
+  e.style.background=bad?'#fff3cd':'';e.style.borderColor=bad?'#e0a800':'';
+  e.title=bad?('Valor fuera del rango habitual ('+(mn||'')+' a '+(mx||'')+'). Revisalo; si es correcto, dejalo.'):'';
+  sv('t');clRefresh();
+}
+function clRefSync(el){var r=document.getElementById('t_ref_no');if(r)r.value=el.value;sv('t');}
+function _show(el,on){if(el)el.style.display=on?'':'none';}
+function clRefresh(){
+  var c=clGet();
+  _show(clEl('tanks_other'),c.tanks==='Other');
+  var vg=clEl('vegoil');if(vg){var nv=c.vegoil_never==='Never';vg.disabled=nv;if(nv&&vg.value){vg.value='';}}
+  _show(clEl('chem1_other'),c.chem1==='Other');
+  _show(clEl('chem2_other'),c.chem2==='Other');
+  var hc=clHasChem(c),i,l=document.querySelectorAll('#cleaning-main .cl-c1');
+  for(i=0;i<l.length;i++)_show(l[i],hc);
+  l=document.querySelectorAll('#cleaning-main .cl-c2');
+  for(i=0;i<l.length;i++)_show(l[i],hc&&!!c.chem2);
+  // resumen de lo que viene de Tankers
+  var sum=document.getElementById('tc-summary');
+  if(sum){
+    var d=null;try{d=getT();}catch(e){}
+    if(d){
+      var lc=clCargo(d,'p1'),nc=clCargo(d,'nom');
+      var it=[['Vessel',d.name],['IMO',d.imo],['Owner',d.owner],['Date',d.t_date],['Coating',CL_COAT[d.coating]||d.coating],
+              ['Last cargo',lc],['Next cargo',nc],['Last disch. port',d.prev_port]];
+      sum.innerHTML=it.map(function(x){return '<span><b>'+x[0]+':</b> '+(x[1]?ex(x[1]):'<i style="color:#bbb">sin dato</i>')+'</span>';}).join('');
+    }
+  }
+  var rf=document.getElementById('tc_ref'),r0=document.getElementById('t_ref_no');
+  if(rf&&r0&&document.activeElement!==rf)rf.value=r0.value;
+}
+function clCargo(d,k){
+  var a=[];Object.keys(d.tanks||{}).forEach(function(tk){var v=d.tanks[tk]&&d.tanks[tk][k];if(v&&a.indexOf(v)<0)a.push(v);});
+  return a.join(', ');
+}
+// lo que falta para considerar completa la planilla (no bloquea el guardado)
+function clMissing(d){
+  var c=d.cl||{},m=[];
+  function need(v,l){if(!v)m.push(l);}
+  need(c.super,'Superintendent');need(c.tanks,'Cargo tanks');need(d.cond_before,'Pre-inspection');
+  need(c.chem1,'Chemical 1');
+  if(clHasChem(c)){need(c.chem1_conc,'Chem 1 conc.');need(c.chem1_qty,'Chem 1 qty');need(c.chem1_unit,'Chem 1 unit');
+    if(c.chem2){need(c.chem2_conc,'Chem 2 conc.');need(c.chem2_qty,'Chem 2 qty');need(c.chem2_unit,'Chem 2 unit');}
+    need(d.qty_fw,'FW for chemical');need(c.cycles,'Chem cycles');need(c.batch,'Tanks per batch');}
+  need(c.fw_rinse,'FW final rinse');need(c.manual,'Manual cleaning');need(c.soot,'Soot in hoppers');
+  need(d.cond_after,'Final condition');need(c.days,'Total days');need(c.passed,'Pass inspection');
+  return m;
+}
+function clLoad(d){
+  var c=d.cl;
+  if(!c){   // registro anterior a esta pestana: se aprovecha lo que tenia
+    c={};
+    if(d.chem_name){c.chem1='Other';c.chem1_other=d.chem_name;}
+    else if(d.chem==='NO'){c.chem1='None';}
+  }
+  CL_KEYS.forEach(function(k){
+    var e=clEl(k),v=(c[k]==null?'':c[k]);if(!e)return;
+    if(CL_TGL.indexOf(k)>=0){e.value=v;_clPaint(k,v);}else setSel(e,v);
+  });
+  clRefresh();
+}
+// fila "plana" que se guarda en la columna cleaning (la usa la Cleaning DB sin bajar la planilla entera)
+function clRow(d){
+  var c=d.cl||{};
+  var veg=(c.vegoil_never==='Never')?'Never':(c.vegoil||'');
+  var hc=clHasChem(c),h2=hc&&!!c.chem2;
+  var o={owner:d.owner||'',superintendent:c.super||'',cargo_tanks:clName(c,'tanks'),
+    coating:CL_COAT[d.coating]||d.coating||'',year_applied:c.year||'',last_vegoil:veg,
+    pre_insp:d.cond_before||'',temp:c.temp||'',
+    chem1:clName(c,'chem1'),chem1_conc:hc?c.chem1_conc:'',chem1_qty:hc?c.chem1_qty:'',chem1_unit:hc?c.chem1_unit:'',
+    chem2:h2?clName(c,'chem2'):'',chem2_conc:h2?c.chem2_conc:'',chem2_qty:h2?c.chem2_qty:'',chem2_unit:h2?c.chem2_unit:'',
+    fw_chem:hc?(d.qty_fw||''):'',cycles:hc?c.cycles:'',batch:hc?c.batch:'',
+    fw_rinse:c.fw_rinse||'',manual:c.manual||'',slop:d.slop||'',soot:c.soot||'',final_cond:d.cond_after||'',
+    days:c.days||'',passed:c.passed||'',notes:c.notes||''};
+  var propio=CL_KEYS.some(function(k){return !!c[k];})||!!d.cond_before||!!d.cond_after||!!d.slop||!!d.qty_fw;
+  o.filled=propio;o.missing=clMissing(d).length;
+  return o;
+}
+
+// ── Cleaning DB ───────────────────────────────────────────────────────────
+var CDB_GROUPS=[['Identification',6],['Coating',2],['Cargo history',3],['Next cargo',1],['Washing',3],['Chemical 1',4],
+  ['Chemical 2',4],['Chemical recirculation',3],['Final rinse & manual',2],['Condition',3],['Close-out',3]];
+var CDB_HEAD=['IMO','Vessel','Owner','Superintendent','Date','Cargo tanks (no.)','Coating type','Year applied','Last cargo',
+  'Last vegoil cargo (months)','Last disch. Port','Next cargo','Open sea/Up river','Pre-insp.','Temp of hot wash','Product','Conc. %','Qty','Unit',
+  'Product','Conc. %','Qty','Unit','FW for chemical','Chem cycles','Tanks per batch','FW final rinse','Manual cleaning',
+  'Slop quantity','Soot in hoppers','Final cond.','Total days','Pass insp.','Notes'];
+var CDB_COLS='id,ref_no,date,type,vessel,imo,prev_port,last_cargo,nom_cargo,washed,qty_fw,cleaning,created_at';
+var cdbData=[],cdbFiltered=[];
+function cdbRow(r){
+  var c=r.cleaning||{};
+  return [r.imo,r.vessel,c.owner,c.superintendent,r.date,c.cargo_tanks,c.coating,c.year_applied,r.last_cargo,
+    c.last_vegoil,r.prev_port,r.nom_cargo,r.washed,c.pre_insp,c.temp,c.chem1,c.chem1_conc,c.chem1_qty,c.chem1_unit,
+    c.chem2,c.chem2_conc,c.chem2_qty,c.chem2_unit,(c.fw_chem!=null?c.fw_chem:r.qty_fw),c.cycles,c.batch,c.fw_rinse,c.manual,
+    c.slop,c.soot,c.final_cond,c.days,c.passed,c.notes].map(function(v){return v==null?'':String(v);});
+}
+function cdbKeep(r){return r.cleaning&&r.cleaning.filled&&/tank/i.test(r.type||'');}
+function loadCleaningData(){
+  var st=document.getElementById('cdb-status');
+  if(!getSB()){st.textContent='No connection to database';return;}
+  st.textContent='Loading...';
+  fetchAllInspections(CDB_COLS).then(function(res){
+    if(res.error){
+      var m=String(res.error.message||res.error);
+      st.textContent=/cleaning/i.test(m)?'Falta crear la columna "cleaning" en la base (correr el SQL de instalacion).':('Error: '+m);
+      return;
+    }
+    cdbData=(res.data||[]).filter(cdbKeep);
+    cdbData.sort(function(a,b){var d1=_refNum(b.ref_no)-_refNum(a.ref_no);if(d1)return d1;return String(b.created_at||'').localeCompare(String(a.created_at||''));});
+    filterCleaning();
+  });
+}
+function filterCleaning(){
+  function v(id){return (document.getElementById(id).value||'').toLowerCase();}
+  var fv=v('cdb-f-vessel'),fo=v('cdb-f-owner'),fc=v('cdb-f-chem'),fg=v('cdb-f-cargo');
+  var co=document.getElementById('cdb-f-coating').value,pa=document.getElementById('cdb-f-passed').value;
+  var es=document.getElementById('cdb-f-estado').value,mo=document.getElementById('cdb-f-date').value;
+  var mm=mo?mo.split('-').reverse().join('/'):'';
+  cdbFiltered=cdbData.filter(function(r){
+    var c=r.cleaning||{};
+    if(fv&&(r.vessel||'').toLowerCase().indexOf(fv)<0)return false;
+    if(fo&&(c.owner||'').toLowerCase().indexOf(fo)<0)return false;
+    if(fc&&((c.chem1||'')+' '+(c.chem2||'')).toLowerCase().indexOf(fc)<0)return false;
+    if(fg&&((r.last_cargo||'')+' '+(r.nom_cargo||'')).toLowerCase().indexOf(fg)<0)return false;
+    if(co&&(c.coating||'')!==co)return false;
+    if(pa&&(c.passed||'')!==pa)return false;
+    if(es==='ok'&&c.missing>0)return false;
+    if(es==='inc'&&!(c.missing>0))return false;
+    if(mm&&(r.date||'').indexOf(mm)<0)return false;
+    return true;
+  });
+  renderCleaningTable();
+}
+function renderCleaningTable(){
+  var TH='padding:7px 8px;text-align:left;white-space:nowrap;';
+  var g='<tr style="background:#1a2a3a;color:#fff"><th style="'+TH+'" rowspan="2">Ref No.</th><th style="'+TH+'" rowspan="2">Estado</th>';
+  CDB_GROUPS.forEach(function(x){g+='<th colspan="'+x[1]+'" style="'+TH+'text-align:center;border-left:1px solid #3a4a5a">'+ex(x[0])+'</th>';});
+  g+='</tr><tr style="background:#2c3e50;color:#fff">';
+  CDB_HEAD.forEach(function(h){g+='<th style="'+TH+'font-weight:600">'+ex(h)+'</th>';});
+  g+='</tr>';
+  document.getElementById('cdb-thead').innerHTML=g;
+  var td='padding:6px 8px;border-bottom:1px solid #eee;white-space:nowrap';
+  document.getElementById('cdb-tbody').innerHTML=cdbFiltered.map(function(r,i){
+    var c=r.cleaning||{},inc=c.missing>0;
+    var est=inc?'<span style="color:#b98900;font-weight:700" title="Faltan '+c.missing+' datos">Incompleto ('+c.missing+')</span>':'<span style="color:#2d6a2d;font-weight:700">Completo</span>';
+    return '<tr style="background:'+(i%2?'#f9f9f7':'#fff')+'"><td style="'+td+';font-weight:600">'+ex(r.ref_no||'')+'</td><td style="'+td+'">'+est+'</td>'
+      +cdbRow(r).map(function(v,k){return '<td style="'+td+(k===33?';white-space:normal;min-width:220px':'')+'">'+ex(v)+'</td>';}).join('')+'</tr>';
+  }).join('')||'<tr><td colspan="36" style="padding:16px;text-align:center;color:#999">Sin registros de limpieza.</td></tr>';
+  document.getElementById('cdb-status').textContent=cdbFiltered.length+' records'+(cdbFiltered.length!==cdbData.length?' (filtered from '+cdbData.length+')':'');
+}
+// Excel con el mismo formato de la planilla "Tank cleaning history"
+function buildCleaningXlsx(rows){
+  var X='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  var NUM={7:1,9:1,14:1,16:1,17:1,20:1,21:1,23:1,24:1,25:1,26:1,28:1,31:1};   // columnas numericas (indice desde 0)
+  function cell(col,row,v,st){
+    var ref=colLetter(col)+row,s=st?' s="'+st+'"':'';
+    if(v==null||v==='')return st?'<c r="'+ref+'"'+s+'/>':'';
+    if(NUM[col]&&row>5&&/^-?\d+(\.\d+)?$/.test(String(v)))return '<c r="'+ref+'"'+s+'><v>'+v+'</v></c>';
+    return '<c r="'+ref+'"'+s+' t="inlineStr"><is><t xml:space="preserve">'+ex(v)+'</t></is></c>';
+  }
+  var n=CDB_HEAD.length,last=colLetter(n-1),lastRow=Math.max(rows.length+5,6);
+  var sd='<row r="1">'+cell(0,1,'Tank cleaning history',1)+'</row><row r="2">'+cell(0,2,'One row per operation.',0)+'</row>';
+  var merges=[],col=0,g='<row r="4">';
+  CDB_GROUPS.forEach(function(x){
+    for(var k=0;k<x[1];k++)g+=cell(col+k,4,k===0?x[0]:'',2);
+    if(x[1]>1)merges.push(colLetter(col)+'4:'+colLetter(col+x[1]-1)+'4');
+    col+=x[1];
+  });
+  sd+=g+'</row><row r="5">';
+  CDB_HEAD.forEach(function(h,i){sd+=cell(i,5,h,3);});
+  sd+='</row>';
+  rows.forEach(function(r,ri){sd+='<row r="'+(ri+6)+'">';r.forEach(function(v,i){sd+=cell(i,ri+6,v,0);});sd+='</row>';});
+  var cols='<cols>';
+  CDB_HEAD.forEach(function(h,i){var w=h.length;rows.forEach(function(r){var L=String(r[i]==null?'':r[i]).length;if(L>w)w=L;});
+    cols+='<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+Math.min(Math.max(w+3,9),45)+'" customWidth="1"/>';});
+  cols+='</cols>';
+  var zip=new PizZip();
+  zip.file('[Content_Types].xml',X+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+    +'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
+    +'<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+    +'<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+    +'<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
+  zip.folder('_rels').file('.rels',X+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+  var xl=zip.folder('xl');
+  xl.file('workbook.xml',X+'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Cleaning history" sheetId="1" r:id="rId1"/></sheets>'
+    +'<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">\'Cleaning history\'!$A$5:$'+last+'$'+lastRow+'</definedName></definedNames></workbook>');
+  xl.folder('_rels').file('workbook.xml.rels',X+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+    +'<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
+  xl.file('styles.xml',X+'<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+    +'<fonts count="4"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><name val="Calibri"/></font>'
+    +'<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
+    +'<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
+    +'<fill><patternFill patternType="solid"><fgColor rgb="FF1F4E78"/><bgColor indexed="64"/></patternFill></fill>'
+    +'<fill><patternFill patternType="solid"><fgColor rgb="FFDDEBF7"/><bgColor indexed="64"/></patternFill></fill></fills>'
+    +'<borders count="2"><border/><border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom></border></borders>'
+    +'<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+    +'<cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+    +'<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+    +'<xf numFmtId="0" fontId="2" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+    +'<xf numFmtId="0" fontId="3" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf></cellXfs>'
+    +'<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>');
+  xl.folder('worksheets').file('sheet1.xml',X+'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+    +'<sheetViews><sheetView tabSelected="1" workbookViewId="0"><pane xSplit="2" ySplit="5" topLeftCell="C6" activePane="bottomRight" state="frozen"/></sheetView></sheetViews>'
+    +cols+'<sheetData>'+sd+'</sheetData><autoFilter ref="A5:'+last+lastRow+'"/>'
+    +(merges.length?'<mergeCells count="'+merges.length+'">'+merges.map(function(m){return '<mergeCell ref="'+m+'"/>';}).join('')+'</mergeCells>':'')
+    +'</worksheet>');
+  return zip.generate({type:'uint8array',compression:'DEFLATE'});
+}
+function downloadCleaningExcel(){
+  if(!cdbFiltered.length){alert('No hay registros para exportar.');return;}
+  var bytes=buildCleaningXlsx(cdbFiltered.map(cdbRow));
+  dload(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'Tank_Cleaning_History_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+// respaldo automatico: mismo criterio y misma carpeta que el de inspecciones
+function runCleaningBackup(dir){
+  var T=window.__TAURI__;if(!T||!T.fs||!dir)return;
+  fetchAllInspections(CDB_COLS).then(function(res){
+    if(res.error){try{logEvent('error','backup','cleaning: '+(res.error.message||String(res.error)),null);}catch(e){}return;}
+    var data=(res.data||[]).filter(cdbKeep);
+    data.sort(function(a,b){return _refNum(b.ref_no)-_refNum(a.ref_no);});
+    var bytes;try{bytes=buildCleaningXlsx(data.map(cdbRow));}catch(e){console.error('cleaning backup:',e);return;}
+    var sep=dir.indexOf('\\')>=0?'\\':'/';
+    T.fs.writeFile(dir+sep+'venetucci_tank_cleaning.xlsx',bytes).then(function(){console.log('Respaldo de limpieza guardado ('+data.length+')');},
+      function(e){console.error('cleaning backup write:',e);});
+  });
+}
 
 // ── LINE-UP (solo lectura; lo arma el servidor) ────────────────────────────
 var _MES_LU=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
@@ -2194,7 +2627,7 @@ function dlF13(){
   xml=fpr(xml,P13.term2,'2. '+(d.term2||dash));
   xml=fpr(xml,P13.term3,'3. '+(d.term3||dash));
   xml=fpr(xml,P13.washed,d.washed||dash);
-  xml=fpr(xml,P13.chem,'Chemical: '+d.chem);
+  xml=fpr(xml,P13.chem,'Chemical: '+(d.chem||dash));
   xml=fp(xml,P13.chem_val,d.chem_name||dash);
   xml=fpr(xml,P13.cond_before,d.cond_before||dash);
   xml=fpr(xml,P13.cond_after,d.cond_after||dash);
@@ -2278,9 +2711,8 @@ function dlF44(){
   var _f44c={'A':'9931','B':'9932','C':'9933'}[d.clean];xml=markWordX(xml,_f44c);
   var rNorm='<w:rPr><w:rFonts w:asciiTheme="majorHAnsi" w:hAnsiTheme="majorHAnsi" w:cstheme="majorHAnsi"/><w:iCs/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="en-GB"/></w:rPr>';
   var rItal='<w:rPr><w:rFonts w:cstheme="minorHAnsi"/><w:i/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="en-GB"/></w:rPr>';
-  var coatingRuns=(d.coating==='stainless steel')
-    ?'<w:r>'+rNorm+'<w:t xml:space="preserve">The vessel\'s pumps and lines have been inspected as thoroughly as possible in areas where inspection was feasible. The interior of the cargo compartment was found to be </w:t></w:r><w:r>'+rItal+'<w:t>stainless steel.</w:t></w:r>'
-    :'<w:r>'+rNorm+'<w:t xml:space="preserve">The vessel\'s pumps and lines have been inspected as thoroughly as possible in areas where inspection was feasible. The interior of the cargo compartment was found to be </w:t></w:r><w:r>'+rItal+'<w:t>coated with epoxy.</w:t></w:r>';
+  var _coatTxt={'stainless steel':'stainless steel.','zinc':'coated with zinc.'}[d.coating]||'coated with epoxy.';
+  var coatingRuns='<w:r>'+rNorm+'<w:t xml:space="preserve">The vessel\'s pumps and lines have been inspected as thoroughly as possible in areas where inspection was feasible. The interior of the cargo compartment was found to be </w:t></w:r><w:r>'+rItal+'<w:t>'+_coatTxt+'</w:t></w:r>';
   xml=xml.replace(new RegExp('(<w:p\\b[^>]*w14:paraId="3DBE8E1B"[^>]*><w:pPr>[\\s\\S]*?</w:pPr>)[\\s\\S]*?(</w:p>)'),function(m,ppr,end){return ppr+coatingRuns+end;});
   F44_TANKS.forEach(function(tk){
     var active=d.active_tanks.indexOf(tk)>=0;
@@ -2645,6 +3077,7 @@ function runBackup(manual){
     var path=dir+sep+'venetucci_backup.xlsx';
     T.fs.writeFile(path,bytes).then(function(){
       console.log('Respaldo guardado: '+path+' ('+rows.length+' registros)');
+      try{runCleaningBackup(dir);}catch(e){}
       var el=document.getElementById('bk-state');
       if(el){var t=el.textContent;el.textContent='Respaldo actualizado ('+rows.length+' registros)';setTimeout(function(){showBackupState();},2500);}
       if(manual)alert('Respaldo guardado:\n'+path+'\n\n'+rows.length+' registros.');
@@ -2671,7 +3104,7 @@ function exportAdminExcel(){
 function initAdmin(){}
 
 function dlCS(){
-  var isT=document.getElementById('tab-t')&&document.getElementById('tab-t').classList.contains('active');
+  var isT=_curTab==='t'||_curTab==='tc';
   var d=isT?getT():getB();
   var vessel=d.name||'-----';
   var date=(isT?d.t_date:d.b_date)||'-----';
