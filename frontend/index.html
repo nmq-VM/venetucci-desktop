@@ -826,7 +826,7 @@ function recordT(d){
     prev_port:d.prev_port||'',destination:d.dest||'',
     charterer:d.charterer||'',insp_place:d.insp_place||'',
     last_cargo:last.join(', '),nom_cargo:nom.join(', '),cleaning:d.clean||'',
-    chemical:d.chem_name||'',qty_fw:d.qty_fw||'',washed:d.washed||'',cleaning:clRow(d)};
+    chemical:d.chem_name||'',qty_fw:d.qty_fw||'',washed:d.washed||'',tank_cleaning:clRow(d)};
 }
 var _asT={};
 function autoSave(tab){
@@ -911,8 +911,8 @@ function _upsertTO(sb,rec,ms){
     sb.from('inspections').upsert([clean],{onConflict:'inspection_id'}).then(
       function(res){
         if(fired)return;
-        if(res&&res.error&&('cleaning' in clean)&&/cleaning/i.test(String(res.error.message||''))){
-          var sin={};for(var k2 in clean){if(k2!=='cleaning')sin[k2]=clean[k2];}
+        if(res&&res.error&&('tank_cleaning' in clean)&&/tank_cleaning/i.test(String(res.error.message||''))){
+          var sin={};for(var k2 in clean){if(k2!=='tank_cleaning')sin[k2]=clean[k2];}
           sb.from('inspections').upsert([sin],{onConflict:'inspection_id'}).then(
             function(r2){if(!fired){fired=true;clearTimeout(t);resolve(r2);}},
             function(e2){if(!fired){fired=true;clearTimeout(t);resolve({error:e2});}});
@@ -1305,7 +1305,7 @@ function dismissUpdate(){var m=document.getElementById('update-modal');if(m)m.st
 var _updBusy=false,_updLast=0,_updSnooze=0,_updSnoozeVer='',_belowMin=false,_requiredVer='';
 var UPD_THROTTLE=3*60*60*1000;   // no chequear mas de 1 vez cada 3 hs
 var UPD_SNOOZE=6*60*60*1000;     // si toca Cancelar, no re-molestar por 6 hs
-var APP_SEMVER='12';   // numero visible/contador (V1, V2, ...) - subir de a 1 por release         // <-- SUBIR en cada release (junto con tauri.conf.json)
+var APP_SEMVER='13';   // numero visible/contador (V1, V2, ...) - subir de a 1 por release         // <-- SUBIR en cada release (junto con tauri.conf.json)
 
 function cmpVer(a,b){
   a=(''+(a||'0')).split('.').map(function(n){return parseInt(n,10)||0;});
@@ -2132,16 +2132,16 @@ var CDB_HEAD=['IMO','Vessel','Owner','Superintendent','Date','Cargo tanks (no.)'
   'Last vegoil cargo (months)','Last disch. Port','Next cargo','Open sea/Up river','Pre-insp.','Temp of hot wash','Product','Conc. %','Qty','Unit',
   'Product','Conc. %','Qty','Unit','FW for chemical','Chem cycles','Tanks per batch','FW final rinse','Manual cleaning',
   'Slop quantity','Soot in hoppers','Final cond.','Total days','Pass insp.','Notes'];
-var CDB_COLS='id,ref_no,date,type,vessel,imo,prev_port,last_cargo,nom_cargo,washed,qty_fw,cleaning,created_at';
+var CDB_COLS='id,ref_no,date,type,vessel,imo,prev_port,last_cargo,nom_cargo,washed,qty_fw,tank_cleaning,created_at';
 var cdbData=[],cdbFiltered=[];
 function cdbRow(r){
-  var c=r.cleaning||{};
+  var c=r.tank_cleaning||{};
   return [r.imo,r.vessel,c.owner,c.superintendent,r.date,c.cargo_tanks,c.coating,c.year_applied,r.last_cargo,
     c.last_vegoil,r.prev_port,r.nom_cargo,r.washed,c.pre_insp,c.temp,c.chem1,c.chem1_conc,c.chem1_qty,c.chem1_unit,
     c.chem2,c.chem2_conc,c.chem2_qty,c.chem2_unit,(c.fw_chem!=null?c.fw_chem:r.qty_fw),c.cycles,c.batch,c.fw_rinse,c.manual,
     c.slop,c.soot,c.final_cond,c.days,c.passed,c.notes].map(function(v){return v==null?'':String(v);});
 }
-function cdbKeep(r){return r.cleaning&&r.cleaning.filled&&/tank/i.test(r.type||'');}
+function cdbKeep(r){return r.tank_cleaning&&r.tank_cleaning.filled&&/tank/i.test(r.type||'');}
 function loadCleaningData(){
   var st=document.getElementById('cdb-status');
   if(!getSB()){st.textContent='No connection to database';return;}
@@ -2149,7 +2149,7 @@ function loadCleaningData(){
   fetchAllInspections(CDB_COLS).then(function(res){
     if(res.error){
       var m=String(res.error.message||res.error);
-      st.textContent=/cleaning/i.test(m)?'Falta crear la columna "cleaning" en la base (correr el SQL de instalacion).':('Error: '+m);
+      st.textContent=/tank_cleaning/i.test(m)?'Falta crear la columna "tank_cleaning" en la base (correr el SQL de instalacion).':('Error: '+m);
       return;
     }
     cdbData=(res.data||[]).filter(cdbKeep);
@@ -2164,7 +2164,7 @@ function filterCleaning(){
   var es=document.getElementById('cdb-f-estado').value,mo=document.getElementById('cdb-f-date').value;
   var mm=mo?mo.split('-').reverse().join('/'):'';
   cdbFiltered=cdbData.filter(function(r){
-    var c=r.cleaning||{};
+    var c=r.tank_cleaning||{};
     if(fv&&(r.vessel||'').toLowerCase().indexOf(fv)<0)return false;
     if(fo&&(c.owner||'').toLowerCase().indexOf(fo)<0)return false;
     if(fc&&((c.chem1||'')+' '+(c.chem2||'')).toLowerCase().indexOf(fc)<0)return false;
@@ -2188,7 +2188,7 @@ function renderCleaningTable(){
   document.getElementById('cdb-thead').innerHTML=g;
   var td='padding:6px 8px;border-bottom:1px solid #eee;white-space:nowrap';
   document.getElementById('cdb-tbody').innerHTML=cdbFiltered.map(function(r,i){
-    var c=r.cleaning||{},inc=c.missing>0;
+    var c=r.tank_cleaning||{},inc=c.missing>0;
     var est=inc?'<span style="color:#b98900;font-weight:700" title="Faltan '+c.missing+' datos">Incompleto ('+c.missing+')</span>':'<span style="color:#2d6a2d;font-weight:700">Completo</span>';
     return '<tr style="background:'+(i%2?'#f9f9f7':'#fff')+'"><td style="'+td+';font-weight:600">'+ex(r.ref_no||'')+'</td><td style="'+td+'">'+est+'</td>'
       +cdbRow(r).map(function(v,k){return '<td style="'+td+(k===33?';white-space:normal;min-width:220px':'')+'">'+ex(v)+'</td>';}).join('')+'</tr>';
