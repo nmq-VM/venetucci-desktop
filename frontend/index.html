@@ -40,9 +40,14 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f0ea;color:#1a1a1a;mi
 .btn-dl:disabled{opacity:.35;cursor:not-allowed}
 .btn-word{background:#1e5fa8;color:#fff}.btn-word:hover:not(:disabled){background:#154a85}
 .btn-xls{background:#1a7a3a;color:#fff}.btn-xls:hover:not(:disabled){background:#145e2d}
-.tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0da;padding:0 16px}
-.tab{padding:13px 22px;cursor:pointer;font-size:14px;font-weight:600;color:#777;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
-.tab.active{color:#1a1a1a;border-bottom-color:#1a1a1a}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;background:#fff;border-bottom:1px solid #e0e0da;padding:9px 16px}
+.tab{padding:8px 16px;cursor:pointer;font-size:14px;font-weight:600;color:#5b6b7a;border-radius:7px;transition:all .15s;white-space:nowrap}
+.tab:hover{background:#f1f3f5}
+.tab.active,.tab.active:hover{background:#1f4e78;color:#fff}
+.subtabs{display:none;gap:6px;flex-wrap:wrap;background:#f7f7f3;border-bottom:1px solid #e0e0da;padding:7px 16px}
+.subtab{padding:5px 13px;cursor:pointer;font-size:13px;font-weight:600;color:#5b6b7a;border-radius:6px;border:1px solid transparent;transition:all .15s;white-space:nowrap}
+.subtab:hover{background:#eceee9}
+.subtab.active,.subtab.active:hover{background:#fff;color:#1f4e78;border-color:#c9dbee}
 .tab:hover:not(.active){color:#444}
 .main{display:none;padding:20px 16px;max-width:1280px;margin:0 auto}
 .section{background:#fff;border-radius:10px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
@@ -72,7 +77,7 @@ input:focus,select:focus{border-color:#4a9eff;background:#fff}
 .tgl button.na{background:#888;color:#fff}
 .c-opts{display:flex;gap:6px;flex-wrap:wrap}
 .c-opt{padding:5px 12px;border-radius:6px;border:1px solid #ddd;cursor:pointer;font-size:12px;font-weight:700;background:#f5f5f5;color:#888;transition:all .15s}
-.c-opt.active{background:#5c3a9e;color:#fff;border-color:#5c3a9e}
+.c-opt.active{background:#1f4e78;color:#fff;border-color:#1f4e78}
 .hsel{display:flex;gap:5px;flex-wrap:wrap}
 .hsel-btn{width:34px;height:34px;border-radius:50%;border:2px solid #ddd;cursor:pointer;font-size:13px;font-weight:700;background:#f5f5f5;color:#888;transition:all .15s;display:flex;align-items:center;justify-content:center}
 .hsel-btn.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
@@ -106,7 +111,7 @@ td input{padding:5px 7px;font-size:12px}
 .tgrid-num{font-size:11px;font-weight:700;color:#888;display:flex;align-items:center;justify-content:center;padding:2px}
 .tgrid-btn{padding:5px 4px;font-size:11px;font-weight:700;border:1px solid #ddd;border-radius:5px;cursor:pointer;background:#f5f5f5;color:#888;transition:all .15s;text-align:center}
 .tgrid-btn.tg-active{background:#1a5fa8;color:#fff;border-color:#1a5fa8}
-.sec-icon{margin-right:6px}
+.sec-icon{display:none}
 .sdb-section{margin-bottom:18px}
 .sdb-title{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
 .sdb-clr{font-size:10px;padding:2px 8px;border:1px solid #fcc;background:#fff1f0;color:#c00;border-radius:4px;cursor:pointer}
@@ -183,15 +188,13 @@ td input{padding:5px 7px;font-size:12px}
 </div>
 
 <div class="tabs">
-  <div class="tab active" id="tab-b" data-tab="b" onclick="switchTab('b')">&#9875; Bulkers &mdash; F.12 / F-21</div>
-  <div class="tab" id="tab-t" data-tab="t" onclick="switchTab('t')">&#128674; Tankers &mdash; F.13 / F-44</div>
-  <div class="tab" id="tab-tc" data-tab="tc" onclick="switchTab('tc')">&#129533; Tank Cleaning</div>
-  <div class="tab" id="tab-idtf" data-tab="idtf" onclick="switchTab('idtf')">&#129532; Cleaning IDTF</div>
-  <div class="tab" id="tab-fosfa" data-tab="fosfa" onclick="switchTab('fosfa')">&#9940; FOSFA Banned</div>
-  <div class="tab" id="tab-lineup" data-tab="lineup" onclick="switchTab('lineup')" style="display:none">&#128197; Line-up</div>
-  <div class="tab" id="tab-db" data-tab="db" onclick="switchTab('db')" style="display:none">&#128202; Database</div>
-  <div class="tab" id="tab-cdb" data-tab="cdb" onclick="switchTab('cdb')" style="display:none">&#128202; Cleaning DB</div>
+  <div class="tab active" id="tab-b" data-tab="b" onclick="goGroup('b')">Bulkers</div>
+  <div class="tab" id="tab-t" data-tab="t" onclick="goGroup('t')">Tankers</div>
+  <div class="tab" id="tab-ref" data-tab="idtf" onclick="goGroup('ref')">IDTF / FOSFA</div>
+  <div class="tab" id="tab-lineup" data-tab="lineup" onclick="goGroup('lineup')" style="display:none">Line-up</div>
+  <div class="tab" id="tab-db" data-tab="db" onclick="goGroup('db')" style="display:none">Database</div>
 </div>
+<div class="subtabs" id="subtabs"></div>
 
 <!-- ════ TANK CLEANING (misma inspeccion que Tankers; se vincula por Ref. No.) ════ -->
 <div class="main" id="cleaning-main" style="display:none">
@@ -311,7 +314,7 @@ td input{padding:5px 7px;font-size:12px}
       <input id="cdb-f-owner" placeholder="Owner..." oninput="filterCleaning()" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:130px">
       <input id="cdb-f-chem" placeholder="Chemical..." oninput="filterCleaning()" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:130px">
       <input id="cdb-f-cargo" placeholder="Last / next cargo..." oninput="filterCleaning()" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:150px">
-      <select id="cdb-f-coating" onchange="filterCleaning()" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px"><option value="">All coatings</option><option>Epoxy</option><option>Stainless steel</option><option>Zinc</option></select>
+      <select id="cdb-f-coating" onchange="filterCleaning()" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px"><option value="">All coatings</option><option>Epoxy</option><option>Stainless steel</option><option>Zinc</option><option>Other</option></select>
       <select id="cdb-f-passed" onchange="filterCleaning()" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px"><option value="">Pass insp.: all</option><option>Yes</option><option>No</option></select>
       <select id="cdb-f-estado" onchange="filterCleaning()" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px"><option value="">Completos e incompletos</option><option value="ok">Solo completos</option><option value="inc">Solo incompletos</option></select>
       <input id="cdb-f-date" type="month" onchange="filterCleaning()" style="padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px">
@@ -500,12 +503,13 @@ td input{padding:5px 7px;font-size:12px}
       <div class="fields" style="grid-template-columns:1.6fr 1fr">
         <div class="field"><label>Cert. Date &amp; Time (F-44)</label><input id="t_cert_datetime" oninput="sv('t')"></div>
         <div class="field"><label>Coating Type</label>
-          <select id="t_coating" onchange="sv('t')" style="font-size:13px;padding:7px 9px;border:1px solid #e0e0da;border-radius:6px;background:#fafafa;color:#111;outline:none;width:100%">
-            <option value="stainless steel">Stainless Steel</option>
+          <select id="t_coating" class="csel" onchange="coatChg()">
             <option value="epoxy" selected>Epoxy</option>
-            <option value="other">Other (edit in document)</option>
+            <option value="stainless steel">Stainless Steel</option>
             <option value="zinc">Zinc</option>
+            <option value="other">Other</option>
           </select>
+          <input id="t_coating_other" placeholder="Coating" oninput="sv('t')" style="display:none;margin-top:4px">
         </div>
       </div>
       <div class="fields">
@@ -729,13 +733,11 @@ function applyRole(role){
   if(tab)tab.style.display=isAdmin?'':'none';
   var tabL=document.getElementById('tab-lineup');
   if(tabL)tabL.style.display=isAdmin?'':'none';
-  var tabC=document.getElementById('tab-cdb');
-  if(tabC)tabC.style.display=isAdmin?'':'none';
   if(btn)btn.style.display=isAdmin?'inline-block':'none';
   if(thA)thA.style.display=_isSuper?'':'none';
   if(!isAdmin){
     var cur=document.querySelector('.tab.active');
-    if(cur&&(cur.id==='tab-db'||cur.id==='tab-lineup'||cur.id==='tab-cdb'))switchTab('b');
+    if(cur&&(cur.id==='tab-db'||cur.id==='tab-lineup'))switchTab('b');
     var cdm=document.getElementById('cdb-main');if(cdm)cdm.style.display='none';
     var dbm=document.getElementById('db-main');if(dbm)dbm.style.display='none';
     var lum=document.getElementById('lineup-main');if(lum)lum.style.display='none';
@@ -1305,7 +1307,7 @@ function dismissUpdate(){var m=document.getElementById('update-modal');if(m)m.st
 var _updBusy=false,_updLast=0,_updSnooze=0,_updSnoozeVer='',_belowMin=false,_requiredVer='';
 var UPD_THROTTLE=3*60*60*1000;   // no chequear mas de 1 vez cada 3 hs
 var UPD_SNOOZE=6*60*60*1000;     // si toca Cancelar, no re-molestar por 6 hs
-var APP_SEMVER='13';   // numero visible/contador (V1, V2, ...) - subir de a 1 por release         // <-- SUBIR en cada release (junto con tauri.conf.json)
+var APP_SEMVER='14';   // numero visible/contador (V1, V2, ...) - subir de a 1 por release         // <-- SUBIR en cada release (junto con tauri.conf.json)
 
 function cmpVer(a,b){
   a=(''+(a||'0')).split('.').map(function(n){return parseInt(n,10)||0;});
@@ -1523,10 +1525,29 @@ function init(){
 }
 
 var _curTab='b';
+// Pestañas agrupadas: arriba el grupo, abajo (si hay mas de una) las vistas.
+var TAB_GROUP={b:'b',t:'t',tc:'t',idtf:'ref',fosfa:'ref',lineup:'lineup',db:'db',cdb:'db'};
+var GROUP_SUBS={t:[['t','Inspection \u00b7 F.13 / F-44'],['tc','Tank Cleaning']],
+                ref:[['idtf','IDTF'],['fosfa','FOSFA']],
+                db:[['db','Inspections'],['cdb','Tank Cleaning']]};
+var GROUP_FIRST={b:'b',t:'t',ref:'idtf',lineup:'lineup',db:'db'};
+var _lastSub={};
+function goGroup(g){switchTab(_lastSub[g]||GROUP_FIRST[g]);}   // vuelve a la ultima vista usada del grupo
+function renderSubtabs(g,tab){
+  var bar=document.getElementById('subtabs');if(!bar)return;
+  var subs=GROUP_SUBS[g];
+  if(!subs){bar.style.display='none';bar.innerHTML='';return;}
+  bar.innerHTML=subs.map(function(x){return '<div class="subtab'+(x[0]===tab?' active':'')+'" onclick="switchTab(\''+x[0]+'\')">'+x[1]+'</div>';}).join('');
+  bar.style.display='flex';
+}
 function switchTab(tab){
   _curTab=tab;
+  var g=TAB_GROUP[tab]||tab;
+  _lastSub[g]=tab;
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
-  document.getElementById('tab-'+tab).classList.add('active');
+  var top=document.getElementById('tab-'+g);
+  if(top){top.classList.add('active');top.dataset.tab=tab;}   // .tab.active.dataset.tab = vista actual
+  renderSubtabs(g,tab);
   document.getElementById('bulker-main').style.display=tab==='b'?'block':'none';
   document.getElementById('tanker-main').style.display=tab==='t'?'block':'none';
   document.getElementById('db-main').style.display=tab==='db'?'block':'none';
@@ -1845,7 +1866,7 @@ function getT(){
     qty_fw:vf('t_qty_fw'),slop:vf('t_slop'),
     clean:state.t.clean,comments:vf('t_comments'),
     inspection_id:inspId('t'),ref_no:vf('t_ref_no'),berth:[vf('t_term1'),vf('t_term2'),vf('t_term3')].filter(function(x){return x;}).join(' / '),port:vf('t_port'),remarks:vf('t_remarks'),
-    coating:vf('t_coating')||'epoxy',
+    coating:vf('t_coating')||'epoxy',coating_other:vf('t_coating_other'),
     chk_clean:state.t.chk_clean,chk_cond:state.t.chk_cond,chk_dry:state.t.chk_dry,chk_free:state.t.chk_free,
     active_tanks:state.t.active_tanks.slice(),tanks:{},tank_results:{}};
   tanks.forEach(function(tk){
@@ -1944,6 +1965,8 @@ function loadT(){
     ['cond_before','cond_after','qty_fw','slop'].forEach(function(f){setSel(document.getElementById('t_'+f),d[f]);});
     if(d.washed)setWashed(d.washed);
     if(d.coating){var ce=document.getElementById('t_coating');if(ce)ce.value=d.coating;}
+    var co=document.getElementById('t_coating_other');if(co)co.value=d.coating_other||'';
+    coatShow();
     if(d.clean)setClean('t',d.clean);
     state.t.inspData=d.inspData||{};
     if(!d.inspData&&d.tank_results)state.t.inspData[d.insp_no||1]={tr:d.tank_results};
@@ -1987,6 +2010,10 @@ var CL_KEYS=['super','tanks','tanks_other','year','vegoil','vegoil_never','temp'
 var CL_TGL=['super','vegoil_never','chem1_unit','chem2_unit','manual','soot','passed'];
 var CL_COAT={'epoxy':'Epoxy','stainless steel':'Stainless steel','zinc':'Zinc'};
 
+function coatShow(){var s=document.getElementById('t_coating'),o=document.getElementById('t_coating_other');if(s&&o)o.style.display=(s.value==='other')?'':'none';}
+function coatChg(){coatShow();sv('t');}
+// nombre del coating para mostrar / guardar (Other -> lo que se escribio)
+function coatName(d){return d.coating==='other'?(d.coating_other||'Other'):(CL_COAT[d.coating]||d.coating||'');}
 function clEl(k){return document.getElementById('t_cl_'+k);}
 function clGet(){var o={};CL_KEYS.forEach(function(k){var e=clEl(k);o[k]=e?String(e.value||'').trim():'';});return o;}
 function clName(c,k){return c[k]==='Other'?(c[k+'_other']||'Other'):(c[k]||'');}
@@ -2069,7 +2096,7 @@ function clRefresh(){
     var d=null;try{d=getT();}catch(e){}
     if(d){
       var lc=clCargo(d,'p1'),nc=clCargo(d,'nom');
-      var it=[['Vessel',d.name],['IMO',d.imo],['Owner',d.owner],['Date',d.t_date],['Coating',CL_COAT[d.coating]||d.coating],
+      var it=[['Vessel',d.name],['IMO',d.imo],['Owner',d.owner],['Date',d.t_date],['Coating',coatName(d)],
               ['Last cargo',lc],['Next cargo',nc],['Last disch. port',d.prev_port]];
       sum.innerHTML=it.map(function(x){return '<span><b>'+x[0]+':</b> '+(x[1]?ex(x[1]):'<i style="color:#bbb">sin dato</i>')+'</span>';}).join('');
     }
@@ -2113,7 +2140,7 @@ function clRow(d){
   var veg=(c.vegoil_never==='Never')?'Never':(c.vegoil||'');
   var hc=clHasChem(c),h2=hc&&!!c.chem2;
   var o={owner:d.owner||'',superintendent:c.super||'',cargo_tanks:clName(c,'tanks'),
-    coating:CL_COAT[d.coating]||d.coating||'',year_applied:c.year||'',last_vegoil:veg,
+    coating:coatName(d),year_applied:c.year||'',last_vegoil:veg,
     pre_insp:d.cond_before||'',temp:c.temp||'',
     chem1:clName(c,'chem1'),chem1_conc:hc?c.chem1_conc:'',chem1_qty:hc?c.chem1_qty:'',chem1_unit:hc?c.chem1_unit:'',
     chem2:h2?clName(c,'chem2'):'',chem2_conc:h2?c.chem2_conc:'',chem2_qty:h2?c.chem2_qty:'',chem2_unit:h2?c.chem2_unit:'',
@@ -2169,7 +2196,8 @@ function filterCleaning(){
     if(fo&&(c.owner||'').toLowerCase().indexOf(fo)<0)return false;
     if(fc&&((c.chem1||'')+' '+(c.chem2||'')).toLowerCase().indexOf(fc)<0)return false;
     if(fg&&((r.last_cargo||'')+' '+(r.nom_cargo||'')).toLowerCase().indexOf(fg)<0)return false;
-    if(co&&(c.coating||'')!==co)return false;
+    if(co==='Other'){if(!c.coating||['Epoxy','Stainless steel','Zinc'].indexOf(c.coating)>=0)return false;}
+    else if(co&&(c.coating||'')!==co)return false;
     if(pa&&(c.passed||'')!==pa)return false;
     if(es==='ok'&&c.missing>0)return false;
     if(es==='inc'&&!(c.missing>0))return false;
@@ -2712,6 +2740,7 @@ function dlF44(){
   var rNorm='<w:rPr><w:rFonts w:asciiTheme="majorHAnsi" w:hAnsiTheme="majorHAnsi" w:cstheme="majorHAnsi"/><w:iCs/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="en-GB"/></w:rPr>';
   var rItal='<w:rPr><w:rFonts w:cstheme="minorHAnsi"/><w:i/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="en-GB"/></w:rPr>';
   var _coatTxt={'stainless steel':'stainless steel.','zinc':'coated with zinc.'}[d.coating]||'coated with epoxy.';
+  if(d.coating==='other')_coatTxt=d.coating_other?('coated with '+ex(d.coating_other)+'.'):dash;
   var coatingRuns='<w:r>'+rNorm+'<w:t xml:space="preserve">The vessel\'s pumps and lines have been inspected as thoroughly as possible in areas where inspection was feasible. The interior of the cargo compartment was found to be </w:t></w:r><w:r>'+rItal+'<w:t>'+_coatTxt+'</w:t></w:r>';
   xml=xml.replace(new RegExp('(<w:p\\b[^>]*w14:paraId="3DBE8E1B"[^>]*><w:pPr>[\\s\\S]*?</w:pPr>)[\\s\\S]*?(</w:p>)'),function(m,ppr,end){return ppr+coatingRuns+end;});
   F44_TANKS.forEach(function(tk){
@@ -2827,6 +2856,7 @@ function toggleDbExpand(){
   var inner=dbm?dbm.firstElementChild:null;
   if(tb)tb.style.display=_dbExpanded?'none':'';
   if(tabs)tabs.style.display=_dbExpanded?'none':'';
+  var _sb=document.getElementById('subtabs');if(_sb)_sb.style.display=_dbExpanded?'none':'flex';
   if(tools)tools.style.display=_dbExpanded?'none':'flex';
   if(sh)sh.style.display=_dbExpanded?'block':'none';
   if(dbm){
